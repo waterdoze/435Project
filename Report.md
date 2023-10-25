@@ -10,11 +10,11 @@
 
 ## 2. _due 10/25_ Project topic
 
-    Running different matrix mulltiplication algorithms on CUDA 
+    Running different matrix mulltiplication algorithms on cpu and gpu (CUDA).  
 
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 
-    Our main method of communication will be through Discord, phone calls, and in-person meetings. We will be running 2 different matrix multiplication algorithms, Naive and Strassen's, on CPU and NVIDIA CUDA GPU. Finally, we'll be using the cuBLAS library to compare our code's runtime to what CUDA should theoretically achieve.  
+    Our main method of communication will be through Discord, text messages, and in-person meetings. We will be running 2 different matrix multiplication algorithms, the naive method and Strassen's, on CPU and NVIDIA CUDA GPU. Finally, we'll be using the cuBLAS library to compare our code's runtime to what CUDA should theoretically achieve.  
 
 - Algorithm 1 (Normal Matrix Multiplication)
 
