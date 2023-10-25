@@ -1,16 +1,16 @@
 # CSCE 435 Group project
 
 ## 1. Group members:
-1. An Duong
-2. Kevin Dai
-3. Matthew Wang
-4. Steven Mao
+1. Kevin Dai
+2. An Duong
+3. Steven Mao
+4. Matthew Wang
 
 ---
 
 ## 2. _due 10/25_ Project topic
 
-    Running different matrix mulltiplication algorithms on cpu and gpu (CUDA).  
+    Running different matrix multiplication algorithms on CPU and GPU (CUDA).  
 
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 
