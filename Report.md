@@ -1,20 +1,26 @@
 # CSCE 435 Group project
 
 ## 1. Group members:
-1. An Duong
-2. Kevin Dai
-3. Matthew Wang
-4. Steven Mao
+1. Kevin Dai
+2. An Duong
+3. Steven Mao
+4. Matthew Wang
 
 ---
 
 ## 2. _due 10/25_ Project topic
 
-    Running different matrix mulltiplication algorithms on CUDA 
+    Running different matrix multiplication algorithms on CPU and GPU (CUDA).  
 
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 
-    Our main method of communication will be through Discord, phone calls, and in-person meetings. We will be running 2 different matrix multiplication algorithms, Naive and Strassen's, on CPU and NVIDIA CUDA GPU. Finally, we'll be using the cuBLAS library to compare our code's runtime to what CUDA should theoretically achieve.  
+    Our main method of communication will be through Discord, text messages, and in-person meetings.
+    
+    We will be running 2 different matrix multiplication algorithms using parallel computing: the naive method and Strassen's, on CPU 
+    and NVIDIA CUDA GPU. After implementing these algorithms, we will compare the runtimes for the naive method vs Strassen's as 
+    well as the algorithm's runtimes on CPU VS GPU. Finally, we'll be using the cuBLAS library to compare our code's runtime to 
+    what CUDA should theoretically achieve.
+    
 
 - Algorithm 1 (Normal Matrix Multiplication)
 
