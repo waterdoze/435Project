@@ -97,7 +97,10 @@
 
 ## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
 
-    For each measurement, we will be using a variety of nxn matrix sizes as well as number of processers/threads. There will be mulitple data points taken where the matrix size stays the same while the number of processers/threads increases for different matrix sizes (strong scaling). That way we can compare the runtime for the same matrix size with different number of processers/threads, and also compare the runtime for different matrix sizes with the same number of processers/threads.
+    For each measurement, we will be using a variety of nxn matrix sizes as well as number of processers/threads. There will be 
+    mulitple data points taken where the matrix size stays the same while the number of processers/threads increases for 
+    different matrix sizes (strong scaling). That way we can compare the runtime for the same matrix size with different number 
+    of processers/threads, and also compare the runtime for different matrix sizes with the same number of processers/threads.
 
     matrix sizes:
         512x512
