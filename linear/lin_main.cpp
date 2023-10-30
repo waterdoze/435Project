@@ -2,8 +2,8 @@
 #include <stdio.h>
 #include <cstdio>
 #include <ctime>
-#include "common.h"
-#include "./linear/lin_naive.h"
+#include "../common.h"
+#include "./lin_naive.h"
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     cpu_lin_naive(A, B, C);
     double duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 
-    std::cout << "time span: " << duration << std::endl;
+    std::cout << "linear naive time span: " << duration << std::endl;
 }
 
 
