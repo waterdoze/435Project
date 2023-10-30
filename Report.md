@@ -10,17 +10,18 @@
 
 ## 2. _due 10/25_ Project topic
 
-    Running different matrix multiplication algorithms on CPU and GPU (CUDA).  
+    Running different matrix multiplication algorithms on CPU and GPU (CUDA).
 
 ## 2. _due 10/25_ Brief project description (what algorithms will you be comparing and on what architectures)
 
     Our main method of communication will be through Discord, text messages, and in-person meetings.
-    
-    We will be running 2 different matrix multiplication algorithms using parallel computing: the naive method and Strassen's, on CPU 
-    and NVIDIA CUDA GPU. After implementing these algorithms, we will compare the runtimes for the naive method vs Strassen's as 
-    well as the algorithm's runtimes on CPU VS GPU. Finally, we'll be using the cuBLAS library to compare our code's runtime to 
+
+    We will be running 2 different matrix multiplication algorithms using parallel computing: the naive method and Strassen's, on CPU
+    and NVIDIA CUDA GPU. After implementing these algorithms, we will compare the runtimes for the naive method vs Strassen's as
+    well as the algorithm's runtimes on CPU VS GPU. Finally, we'll be using the cuBLAS library to compare our code's runtime to
     what CUDA should theoretically achieve.
-    
+
+## 3. _due 11/08_ Pseudocode for each algorithm and implementation
 
 - Algorithm 1 (Normal Matrix Multiplication)
 
@@ -90,7 +91,23 @@
         return C
 
     --------------------
-    
+
 - Algorithm 3 (cuBLAS)
 
-gack234
+
+## 3. _due 11/08_ Evaluation plan - what and how will you measure and compare
+
+    For each measurement, we will be using a variety of nxn matrix sizes as well as number of processers/threads. There will be mulitple data points taken where the matrix size stays the same while the number of processers/threads increases for different matrix sizes (strong scaling). That way we can compare the runtime for the same matrix size with different number of processers/threads, and also compare the runtime for different matrix sizes with the same number of processers/threads.
+
+    matrix sizes:
+        512x512
+        1024x1024
+        2048x2048
+        4096x4096
+
+    number of processers/threads:
+        1 (sequential)
+        2
+        8
+        64
+        256
