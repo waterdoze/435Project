@@ -110,7 +110,7 @@
 
     number of processers/threads:
         1 (sequential)
-        2
-        8
+        4
+        16
         64
         256

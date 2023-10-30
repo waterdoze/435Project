@@ -1,6 +1,6 @@
 #include "../common.h"
 
-void matmul_naive_cpu(std::vector<std::vector<float>> &A, std::vector<std::vector<float>> &B,
+void cpu_lin_naive(std::vector<std::vector<float>> &A, std::vector<std::vector<float>> &B,
                                           std::vector<std::vector<float>> &C) {
 	size_t A_row = A.size();
 	size_t A_column = A[0].size();

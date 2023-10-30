@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     std::vector<std::vector<float>> C(A_row, std::vector<float>(B_column));
 
     std::clock_t start = std::clock();
-    matmul_naive_cpu(A, B, C);
+    cpu_lin_naive(A, B, C);
     double duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 
     std::cout << "time span: " << duration << std::endl;
