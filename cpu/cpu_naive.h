@@ -6,7 +6,7 @@
 #ifndef CPU_NAIVE_H
 #define CPU_NAIVE_H
 
-def cpu_naive(std::vector<std::vector<float>> &A, std::vector<std::vector<float>> &B, std::vector<std::vector<float>> &C) {
+def cpu_naive(mat &A, mat &B, mat &C) {
     size_t A_row = A.size();
     size_t A_column = A[0].size();
     size_t B_row = B.size();
