@@ -16,7 +16,7 @@ int main(int argc, char* argv[]) {
 
 
 
-    mpi_naive(n, taskid, numtasks);
+    mpi_naive(n);
 
     MPI_Finalize();
 }

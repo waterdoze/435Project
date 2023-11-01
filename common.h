@@ -2,6 +2,10 @@
 #include <cstdlib>
 #include <vector>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+#include <adiak.hpp>
+
 #define mat std::vector<std::vector<int>>
 
 void get_random_matrix(mat &matrix) {
