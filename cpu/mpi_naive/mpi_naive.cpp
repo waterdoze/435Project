@@ -2,16 +2,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../common.h"
+#include "../../common.h"
 
 #define MASTER 0
 #define FROM_MASTER 1
 #define FROM_WORKER 2
 
 
-void mpi_naive(int n) {
+int main(int argc, char *argv[]) {
 
     CALI_CXX_MARK_FUNCTION;
+
+    int n;
+    if (argc == 2) {
+        n = atoi(argv[1]);
+    }
+    else
+    {
+        printf("\n Please provide the size of the matrix");
+        return 0;
+    }
 
     int numtasks,                         /* number of tasks in partition */
         taskid,                           /* a task identifier */
@@ -41,6 +51,7 @@ void mpi_naive(int n) {
     const char *worker_calculation = "worker_calculation";
     const char *worker_send = "worker_send";
 
+    MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &taskid);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
@@ -65,9 +76,6 @@ void mpi_naive(int n) {
 
     // master
     if(taskid == MASTER) {
-
-        printf("mpi_mm has started with %d tasks.\n", numtasks);
-        printf("Initializing arrays...\n");
 
         CALI_MARK_BEGIN(master_initialization); // Don't time printf
         double master_initialization_start = MPI_Wtime();
