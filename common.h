@@ -36,6 +36,8 @@ bool verify(mat m1, mat m2) {
     return true;
 }
 
+// m1 and m2 are both n x n
+// bool add is true if we are adding, false if we are subtracting (m1-m2)
 mat addsub_matricies(int n, mat m1, mat m2, bool add) {
     mat ret(n, std::vector<int>(n));
 
@@ -60,10 +62,18 @@ mat combine_matricies(int m, mat m11, mat m12,
 
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
-            ret[i][j] = m11[i][j];
-            ret[i][j + n] = m12[i][j];
-            ret[i + n][j] = m21[i][j];
-            ret[i + n][j + n] = m22[i][j];
+            if(i < m && j < m) {
+                ret[i][j] = m11[i][j];
+            }
+            else if(i < m && j >= m) {
+                ret[i][j] = m12[i][j - m];
+            }
+            else if(i >= m && j < m) {
+                ret[i][j] = m21[i - m][j];
+            }
+            else {
+                ret[i][j] = m22[i - m][j - m];
+            }
         }
     }
     return ret;
