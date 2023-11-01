@@ -4,6 +4,8 @@
 
 #include "../../common.h"
 
+#include "../../lin/lin_naive.h" // TODO: change to cuBlas when implemented
+
 #define MASTER 0
 #define FROM_MASTER 1
 #define FROM_WORKER 2
@@ -166,6 +168,18 @@ int main(int argc, char *argv[]) {
     CALI_MARK_END(whole_computation);
     double whole_computation_end = MPI_Wtime();
     whole_computation_time = whole_computation_end - whole_computation_start;
+
+    // verify
+    if(taskid == MASTER) {
+        mat c2;
+        cpu_lin_naive(a, b, c2); // TODO: change to cuBlas when implemented
+        if(verify(c, c2)) {
+            printf("Verification successful\n");
+        }
+        else {
+            printf("Verification failed\n");
+        }
+    }
 
     adiak::init(NULL);
     adiak::user();
