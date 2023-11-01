@@ -44,6 +44,9 @@ void mpi_naive(int n) {
     MPI_Comm_rank(MPI_COMM_WORLD, &taskid);
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
+    MPI_Comm MPI_COMM_WORKER;
+    MPI_Comm_split(MPI_COMM_WORLD, (taskid == MASTER) ? MPI_UNDEFINED : 1, taskid, &MPI_COMM_WORKER);
+
     if (numtasks < 2)
     {
         printf("Need at least two MPI tasks. Quitting...\n");
