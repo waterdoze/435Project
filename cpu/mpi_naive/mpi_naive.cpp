@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
         rows,                             /* rows of matrix A sent to each worker */
         averow, extra, offset,            /* used to determine rows sent to each worker */
         i, j, k, rc;                      /* misc */
-    mat a;                                /* matrix A to be multiplied */
-        b,                                /* matrix B to be multiplied */
-        c;                                /* result matrix C */
+    mat a(n, std::vector<int>(n));                                /* matrix A to be multiplied */
+    mat b(n, std::vector<int>(n));                                /* matrix B to be multiplied */
+    mat c(n, std::vector<int>(n));                                /* result matrix C */
     MPI_Status status;
 
     double worker_receive_time,       /* Buffer for worker recieve times */
@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
 
     // verify
     if(taskid == MASTER) {
-        mat c2;
+        mat c2(n, std::vector<int>(n));
         cpu_lin_naive(a, b, c2); // TODO: change to cuBlas when implemented
         CALI_MARK_BEGIN(correctness);
         bool correct = verify(c, c2);
@@ -342,4 +342,6 @@ int main(int argc, char *argv[]) {
     // Flush Caliper output before finalizing MPI
     mgr.stop();
     mgr.flush();
+
+    MPI_Finalize();
 }

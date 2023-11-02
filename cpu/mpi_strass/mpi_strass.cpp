@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     CALI_MARK_END(comm);
 
     if(taskid == MASTER) {
-        mat c2;
+        mat c2(n, std::vector<int>(n));
         cpu_lin_naive(a, b, c2);
         CALI_MARK_BEGIN(correctness);
         bool correct = verify(c, c2); // TODO: change to cuBlas when implemented
