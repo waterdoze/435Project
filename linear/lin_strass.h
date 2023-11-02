@@ -46,22 +46,22 @@ mat strassen(mat A, mat B) {
     mat h = split(N, B, N / 2, N / 2);
 
     // Calculate P1 - P7
-    mat p1 = strassen(a, subM(f, h));
-    mat p2 = strassen(addM(a, b), h);
-    mat p3 = strassen(addM(c, d), e);
-    mat p4 = strassen(d, subM(g, e));
-    mat p5 = strassen(addM(a, d), addM(e, h));
-    mat p6 = strassen(subM(b, d), addM(g, h));
-    mat p7 = strassen(subM(a, c), addM(e, f));
+    mat p1 = strassen(a, subM(f, h)); // a(f - h)
+    mat p2 = strassen(addM(a, b), h); // (a + b)h
+    mat p3 = strassen(addM(c, d), e); // (c + d)e
+    mat p4 = strassen(d, subM(g, e)); // d(g - e)
+    mat p5 = strassen(addM(a, d), addM(e, h)); // (a + d)(e + h)
+    mat p6 = strassen(subM(b, d), addM(g, h)); // (b - d)(g + h)
+    mat p7 = strassen(subM(a, c), addM(e, f)); // (a - c)(e + f)
 
-   // Combine to Form C Quadrants
-   mat q1 = addM(subM(addM(p5, p4), p2), p6);
-   mat q2 = addM(p1, p2);
-   mat q3 = addM(p3, p4);
-   mat q4 = subM(subM(addM(p1, p5), p3), p7);
+    // Combine to Form C Quadrants
+    mat q1 = addM(subM(addM(p5, p4), p2), p6); // p5 + p4 - p2 + p6
+    mat q2 = addM(p1, p2); // p1 + p2
+    mat q3 = addM(p3, p4); // p3 + p4
+    mat q4 = subM(subM(addM(p1, p5), p3), p7); // p1 + p5 - p3 - p7
 
-   // Construct C and Return
-   mat C = combine_matricies(q1.size(), q1, q2, q3, q4);
-   return C;
+    // Construct C and Return
+    mat C = combine_matricies(q1.size(), q1, q2, q3, q4);
+    return C;
 }
 #endif
