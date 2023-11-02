@@ -96,7 +96,7 @@ mat split(int n, mat m, int offsetx, int offsety) {
     return ret;
 }
 
-mat add_matrix(mat a, mat b)
+mat addM(mat a, mat b)
 {
     size_t n = a.size();
     mat c(n, std::vector<int>(n));
@@ -106,7 +106,7 @@ mat add_matrix(mat a, mat b)
     return c;
 }
 
-mat sub_matrix(mat a, mat b)
+mat subM(mat a, mat b)
 {
     size_t n = a.size();
     mat c(n, std::vector<int>(n));
