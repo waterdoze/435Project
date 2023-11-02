@@ -48,10 +48,10 @@ mat addsub_matricies(int n, mat m1, mat m2, bool add) {
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             if(add) {
-                result[i][j] = m1[i][j] + m2[i][j];
+                ret[i][j] = m1[i][j] + m2[i][j];
             }
             else {
-                result[i][j] = m1[i][j] - m2[i][j];
+                ret[i][j] = m1[i][j] - m2[i][j];
             }
         }
     }
@@ -94,4 +94,24 @@ mat split(int n, mat m, int offsetx, int offsety) {
         }
     }
     return ret;
+}
+
+mat addM(mat a, mat b)
+{
+    size_t n = a.size();
+    mat c(n, std::vector<int>(n));
+    for (size_t i = 0; i < n; ++i)
+        for (size_t j = 0; j < n; ++j)
+            c[i][j] = a[i][j] + b[i][j];
+    return c;
+}
+
+mat subM(mat a, mat b)
+{
+    size_t n = a.size();
+    mat c(n, std::vector<int>(n));
+    for (size_t i = 0; i < n; ++i)
+        for (size_t j = 0; j < n; ++j)
+            c[i][j] = a[i][j] - b[i][j];
+    return c;
 }
