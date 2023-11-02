@@ -4,13 +4,32 @@
 
 #include "../../common.h"
 
-#include "../../lin/lin_naive.h" // TODO: change to cuBlas when implemented
+// #include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
 
 #define MASTER 0
 #define FROM_MASTER 1
 #define FROM_WORKER 2
 
+void cpu_lin_naive(mat &A, mat &B, mat &C) {
+	size_t A_row = A.size();
+	size_t A_column = A[0].size();
+	size_t B_row = B.size();
+	size_t B_column = B[0].size();
+	size_t C_row = C.size();
+	size_t C_column = C[0].size();
+	
+	
 
+	for (size_t i = 0; i < A_row; ++i) {
+		for (size_t j = 0; j < B_column; ++j) {
+			float tmp = 0.0;
+			for (size_t k = 0; k < A_column; ++k) {
+				tmp += A[i][k] * B[k][j];
+			}
+			C[i][j] = tmp;
+		}
+	}
+}
 int main(int argc, char *argv[]) {
 
     CALI_CXX_MARK_FUNCTION;
@@ -34,7 +53,7 @@ int main(int argc, char *argv[]) {
         rows,                             /* rows of matrix A sent to each worker */
         averow, extra, offset,            /* used to determine rows sent to each worker */
         i, j, k, rc;                      /* misc */
-    mat a;                                /* matrix A to be multiplied */
+    mat a,                                /* matrix A to be multiplied */
         b,                                /* matrix B to be multiplied */
         c;                                /* result matrix C */
     MPI_Status status;
@@ -46,6 +65,18 @@ int main(int argc, char *argv[]) {
         master_initialization_time,   /* Buffer for master initialization time */
         master_send_receive_time = 0; /* Buffer for master send and receive time */
     /* Define Caliper region names */
+    const char *comm = "comm";
+    const char *comm_large = "comm_large";
+    const char *comm_small = "comm_small";
+    const char *comp = "comp";
+    const char *comp_large = "comp_large";
+    const char *comp_small = "comp_small";
+    const char *data_init = "data_init";
+    const char *correctness = "correctness";
+
+    const char *MPI_send = "MPI_send";
+    const char *MPI_recv = "MPI_recv";
+
     const char *whole_computation = "whole_computation";
     const char *master_initialization = "master_initialization";
     const char *master_send_recieve = "master_send_recieve";
@@ -69,6 +100,8 @@ int main(int argc, char *argv[]) {
     numworkers = numtasks - 1;
 
     // WHOLE PROGRAM COMPUTATION PART STARTS HERE
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_large);
     CALI_MARK_BEGIN(whole_computation);
     double whole_computation_start = MPI_Wtime();
 
@@ -79,6 +112,7 @@ int main(int argc, char *argv[]) {
     // master
     if(taskid == MASTER) {
 
+        CALI_MARK_BEGIN(data_init);
         CALI_MARK_BEGIN(master_initialization); // Don't time printf
         double master_initialization_start = MPI_Wtime();
 
@@ -86,9 +120,11 @@ int main(int argc, char *argv[]) {
         get_random_matrix(b);
 
         CALI_MARK_END(master_initialization);
+        CALI_MARK_END(data_init);
         double master_initialization_end = MPI_Wtime();
         master_initialization_time = master_initialization_end - master_initialization_start;
 
+        CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(master_send_recieve);
         double master_send_receive_start = MPI_Wtime();
 
@@ -97,7 +133,8 @@ int main(int argc, char *argv[]) {
         extra = n % numworkers;
         offset = 0;
         mtype = FROM_MASTER;
-
+        CALI_MARK_BEGIN(comm_large)
+        CALI_MARK_BEGIN(MPI_send);
         for(dest = 1; dest <= numworkers; dest++) {
             rows = (dest <= extra) ? averow + 1 : averow;
             MPI_Send(&offset, 1, MPI_INT, dest, mtype, MPI_COMM_WORLD);
@@ -106,7 +143,11 @@ int main(int argc, char *argv[]) {
             MPI_Send(&b, n*n, MPI_INT, dest, mtype, MPI_COMM_WORLD);
             offset = offset + rows;
         }
+        CALI_MARK_END(MPI_send);
+        CALI_MARK_END(comm_large);
 
+        CALI_MARK_BEGIN(comm_large);
+        CALI_MARK_BEGIN(MPI_recv);
         // receive results from worker tasks
         mtype = FROM_WORKER;
         for(i = 1; i <= numworkers; i++) {
@@ -115,14 +156,18 @@ int main(int argc, char *argv[]) {
             MPI_Recv(&rows, 1, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
             MPI_Recv(&c[offset][0], rows*n, MPI_INT, source, mtype, MPI_COMM_WORLD, &status);
         }
+        CALI_MARK_END(MPI_recv);
+        CALI_MARK_END(comm_large);
 
         CALI_MARK_END(master_send_recieve);
+        CALI_MARK_END(comm);
         double master_send_receive_end = MPI_Wtime();
         master_send_receive_time = master_send_receive_end - master_send_receive_start;
     }
 
     if(taskid > MASTER) {
-
+        CALI_MARK_BEGIN(comm);
+        CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_recieve);
         double worker_recieve_start = MPI_Wtime();
 
@@ -133,9 +178,14 @@ int main(int argc, char *argv[]) {
         MPI_Recv(&b, n*n, MPI_INT, MASTER, mtype, MPI_COMM_WORLD, &status);
 
         CALI_MARK_END(worker_recieve);
+        CALI_MARK_END(comm_small);
+        CALI_MARK_END(comm);
+
         double worker_recieve_end = MPI_Wtime();
         worker_receive_time = worker_recieve_end - worker_recieve_start;
 
+        CALI_MARK_BEGIN(comp);
+        CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(worker_calculation);
         double worker_calculation_start = MPI_Wtime();
 
@@ -149,9 +199,13 @@ int main(int argc, char *argv[]) {
             }
         }
         CALI_MARK_END(worker_calculation);
+        CALI_MARK_END(comp_small);
+        CALI_MARK_END(comp);
         double worker_calculation_end = MPI_Wtime();
         worker_calculation_time = worker_calculation_end - worker_calculation_start;
 
+        CALI_MARK_BEGIN(comm);
+        CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
         double worker_send_start = MPI_Wtime();
 
@@ -161,14 +215,19 @@ int main(int argc, char *argv[]) {
         MPI_Send(&c, rows*n, MPI_INT, MASTER, mtype, MPI_COMM_WORLD);
 
         CALI_MARK_END(worker_send);
+        CALI_MARK_END(comm_small);
+        CALI_MARK_END(comm);
         double worker_send_end = MPI_Wtime();
         worker_send_time = worker_send_end - worker_send_start;
     }
 
     CALI_MARK_END(whole_computation);
+    CALI_MARK_END(comp_large);
+    CALI_MARK_END(comp);
     double whole_computation_end = MPI_Wtime();
     whole_computation_time = whole_computation_end - whole_computation_start;
 
+    CALI_MARK_BEGIN(correctness);
     // verify
     if(taskid == MASTER) {
         mat c2;
@@ -180,17 +239,23 @@ int main(int argc, char *argv[]) {
             printf("Verification failed\n");
         }
     }
-
+    CALI_MARK_END(correctness);
     adiak::init(NULL);
-    adiak::user();
-    adiak::launchdate();
-    adiak::libraries();
-    adiak::cmdline();
-    adiak::clustername();
-    adiak::value("num_procs", numtasks);
-    adiak::value("matrix_size", sizeOfMatrix);
-    adiak::value("program_name", "master_worker_matrix_multiplication");
-    adiak::value("matrix_datatype_size", sizeof(double));
+    adiak::launchdate();                                         // launch date of the job
+    adiak::libraries();                                          // Libraries used
+    adiak::cmdline();                                            // Command line used to launch the job
+    adiak::clustername();                                        // Name of the cluster
+    adiak::value("Algorithm", "Naive Matrix Multiplication");                        // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+    adiak::value("ProgrammingModel", "MPI");          // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int");                          // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int));              // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", n);                        // The number of elements in input dataset (1000)
+    // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    adiak::value("num_procs", numtasks);                        // The number of processors (MPI ranks)
+    // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
+    // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
+    // adiak::value("group_num", group_number);                     // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     double worker_receive_time_max,
         worker_receive_time_min,

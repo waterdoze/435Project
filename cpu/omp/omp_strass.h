@@ -1,10 +1,10 @@
-#ifndef LIN_STRASS_H
-#define LIN_STRASS_H
+#ifndef OMP_STRASS_H
+#define OMP_STRASS_H
 
-#include "cpu_naive.h"
-#include "../common.h"
+#include "omp_naive.h"
+#include "../../common.h" //verify file path
 
-
+#include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
 
 mat cpu_strass(mat &A, mat &B, int n) {
     if(n <= 32) {

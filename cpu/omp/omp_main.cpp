@@ -3,8 +3,9 @@
 #include <cstdio>
 #include <ctime>
 
-#include "../common.h"
-#include "cpu_naive.h"
+#include "../../common.h" //verify file path
+#include "omp_naive.h"
+#include "omp_strass.h"
 
 int main(int argc, char *argv[]){
     if (argc != 2) {

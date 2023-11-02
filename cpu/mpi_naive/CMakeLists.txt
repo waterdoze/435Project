@@ -1,20 +1,18 @@
 cmake_minimum_required(VERSION 3.12)
 
+find_package(MPI REQUIRED)
 find_package(caliper REQUIRED)
 find_package(adiak REQUIRED)
-#find_package(OpenMP REQUIRED)
-#OR
-#find_package(MPI REQUIRED)
 
-#project(bitonic LANGUAGES CUDA CXX)
-add_executable(matmul matmul.cpp)
+add_executable(mpi_naive mpi_naive.cpp)
 
-#message(STATUS "CUDA includes : ${CUDA_INCLUDE_DIRS}")
+message(STATUS "MPI includes : ${MPI_INCLUDE_PATH}")
 message(STATUS "Caliper includes : ${caliper_INCLUDE_DIR}")
 message(STATUS "Adiak includes : ${adiak_INCLUDE_DIRS}")
 
-#include_directories(${CUDA_INCLUDE_DIRS})
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
 include_directories(${caliper_INCLUDE_DIR})
 include_directories(${adiak_INCLUDE_DIRS})
 
-target_link_libraries(matmul PRIVATE caliper)
+target_link_libraries(mpi_naive PRIVATE MPI::MPI_CXX)
+target_link_libraries(mpi_naive PRIVATE caliper)

@@ -1,58 +1,43 @@
-#ifndef LIN_NAIVE_H
-#define LIN_NAIVE_H
+#ifndef LIN_STRASS_H
+#define LIN_STRASS_H
 #include "../common.h"
 
-void cpu_lin_strass(mat &A, mat &B, mat &C) {
-    size_t A_row = A.size();
-	size_t A_column = A[0].size();
-	size_t B_row = B.size();
-	size_t B_column = B[0].size();
-	size_t C_row = C.size();
-	size_t C_column = C[0].size();
-
-    if (A_row == 1) {
-        C[0][0] = A[0][0] * B[0][0];
+void cpu_strass_naive(mat &A, mat &B, mat &C)
+{
+    // Assume N X N Matrix and 2^Z = N
+    size_t N = A.size();
+    if (N != A.at(0).size() || N != B.size() || N != B.at(0).size()) {
+        std::cout << "ERROR: Matrix is not square" << std::endl;
         return;
     }
 
-    size_t dim = A_row / 2;
+    // Base Case
 
-    mat A11(dim, std::vector<int>(dim)), 
-        A12(dim, std::vector<int>(dim)),
-        A21(dim, std::vector<int>(dim)),
-        A22(dim, std::vector<int>(dim));
+    // Split A & B
+    mat a = split(N, A, 0, 0);
+    mat b = split(N, A, 0, N / 2);
+    mat c = split(N, A, N / 2, 0);
+    mat d = split(N, A, N / 2, N / 2);
 
-    mat B11(dim, std::vector<int>(dim)), 
-        B12(dim, std::vector<int>(dim)),
-        B21(dim, std::vector<int>(dim)),
-        B22(dim, std::vector<int>(dim));  
+    mat e = split(N, B, 0, 0);
+    mat f = split(N, B, 0, N / 2);
+    mat g = split(N, B, N / 2, 0);
+    mat h = split(N, B, N / 2, N / 2);
 
-    mat C11(dim, std::vector<int>(dim)), 
-        C12(dim, std::vector<int>(dim)),
-        C21(dim, std::vector<int>(dim)),
-        C22(dim, std::vector<int>(dim));
+    // Calculate P1 - P7
+    mat p1 = cpu_strass_naive(a, addsub_matricies(N / 2, f, h, false));
+    /*
+    p1 = a(f-h)
+    p2 = (a+b)h
+    p3 = (c+d)e
+    p4 = d(g-e)
+    p5 = (a+d)(e+h)
+    p6 = (b-d)(g+h)
+    p7 = (a-c)(e+f)
+    */
 
-    mat P1(dim, std::vector<int>(dim)), 
-        P2(dim, std::vector<int>(dim)),
-        P3(dim, std::vector<int>(dim)),
-        P4(dim, std::vector<int>(dim)),
-        P5(dim, std::vector<int>(dim)),
-        P6(dim, std::vector<int>(dim)),
-        P7(dim, std::vector<int>(dim));
+   // Combine to Form C Quadrants
 
-    for (size_t i = 0; i < dim; i++) {
-        for (size_t j = 0; j < dim; j++) {
-            A11[i][j] = A[i][j];
-            A12[i][j] = A[i][j + dim];
-            A21[i][j] = A[i + dim][j];
-            A22[i][j] = A[i + dim][j + dim];
-
-            B11[i][j] = B[i][j];
-            B12[i][j] = B[i][j + dim];
-            B21[i][j] = B[i + dim][j];
-            B22[i][j] = B[i + dim][j + dim];
-        }
-    }
+   // Construct C and Return
 }
-
 #endif
