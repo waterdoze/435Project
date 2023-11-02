@@ -4,13 +4,32 @@
 
 #include "../../common.h"
 
-#include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
+// #include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
 
 #define MASTER 0
 #define FROM_MASTER 1
 #define FROM_WORKER 2
 
+void cpu_lin_naive(mat &A, mat &B, mat &C) {
+	size_t A_row = A.size();
+	size_t A_column = A[0].size();
+	size_t B_row = B.size();
+	size_t B_column = B[0].size();
+	size_t C_row = C.size();
+	size_t C_column = C[0].size();
+	
+	
 
+	for (size_t i = 0; i < A_row; ++i) {
+		for (size_t j = 0; j < B_column; ++j) {
+			float tmp = 0.0;
+			for (size_t k = 0; k < A_column; ++k) {
+				tmp += A[i][k] * B[k][j];
+			}
+			C[i][j] = tmp;
+		}
+	}
+}
 int main(int argc, char *argv[]) {
 
     CALI_CXX_MARK_FUNCTION;
@@ -34,7 +53,7 @@ int main(int argc, char *argv[]) {
         rows,                             /* rows of matrix A sent to each worker */
         averow, extra, offset,            /* used to determine rows sent to each worker */
         i, j, k, rc;                      /* misc */
-    mat a;                                /* matrix A to be multiplied */
+    mat a,                                /* matrix A to be multiplied */
         b,                                /* matrix B to be multiplied */
         c;                                /* result matrix C */
     MPI_Status status;
@@ -93,7 +112,7 @@ int main(int argc, char *argv[]) {
     // master
     if(taskid == MASTER) {
 
-        CALI_MARK_BEGIN(data_init)
+        CALI_MARK_BEGIN(data_init);
         CALI_MARK_BEGIN(master_initialization); // Don't time printf
         double master_initialization_start = MPI_Wtime();
 
@@ -237,8 +256,8 @@ int main(int argc, char *argv[]) {
     adiak::value("num_procs", numtasks);                        // The number of processors (MPI ranks)
     // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
     // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
-    adiak::value("group_num", group_number);                     // The number of your group (integer, e.g., 1, 10)
-    adiak::value("implementation_source", "Online") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+    // adiak::value("group_num", group_number);                     // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     double worker_receive_time_max,
         worker_receive_time_min,

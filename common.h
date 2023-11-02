@@ -48,10 +48,10 @@ mat addsub_matricies(int n, mat m1, mat m2, bool add) {
     for(int i = 0; i < n; i++) {
         for(int j = 0; j < n; j++) {
             if(add) {
-                result[i][j] = m1[i][j] + m2[i][j];
+                ret[i][j] = m1[i][j] + m2[i][j];
             }
             else {
-                result[i][j] = m1[i][j] - m2[i][j];
+                ret[i][j] = m1[i][j] - m2[i][j];
             }
         }
     }
