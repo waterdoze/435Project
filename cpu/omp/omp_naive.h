@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <omp.h>
 
-#ifndef CPU_NAIVE_H
-#define CPU_NAIVE_H
+#include "../../common.h" //verify file path
+
+#ifndef OMP_NAIVE_H
+#define OMP_NAIVE_H
 
 def cpu_naive(mat &A, mat &B, mat &C) {
     size_t A_row = A.size();
@@ -23,3 +25,5 @@ def cpu_naive(mat &A, mat &B, mat &C) {
         }
     }
 }
+
+#endif

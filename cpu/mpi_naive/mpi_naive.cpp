@@ -4,7 +4,7 @@
 
 #include "../../common.h"
 
-#include "../../lin/lin_naive.h" // TODO: change to cuBlas when implemented
+#include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
 
 #define MASTER 0
 #define FROM_MASTER 1
