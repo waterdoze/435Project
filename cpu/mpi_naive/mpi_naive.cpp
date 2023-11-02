@@ -208,19 +208,21 @@ int main(int argc, char *argv[]) {
     double whole_computation_end = MPI_Wtime();
     whole_computation_time = whole_computation_end - whole_computation_start;
 
-    CALI_MARK_BEGIN(correctness);
     // verify
     if(taskid == MASTER) {
         mat c2;
         cpu_lin_naive(a, b, c2); // TODO: change to cuBlas when implemented
-        if(verify(c, c2)) {
+        CALI_MARK_BEGIN(correctness);
+        bool correct = verify(c, c2);
+        CALI_MARK_END(correctness);
+        if(correct) {
             printf("Verification successful\n");
         }
         else {
             printf("Verification failed\n");
         }
     }
-    CALI_MARK_END(correctness);
+
     adiak::init(NULL);
     adiak::launchdate();                                         // launch date of the job
     adiak::libraries();                                          // Libraries used

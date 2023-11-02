@@ -104,17 +104,36 @@ int main(int argc, char* argv[]) {
     CALI_MARK_END(comm);
 
     if(taskid == MASTER) {
+        mat c2;
+        cpu_lin_naive(a, b, c2);
         CALI_MARK_BEGIN(correctness);
-        bool correct = verify(cpu_naive(a, b, n), c); // TODO: change to cuBlas when implemented
+        bool correct = verify(c, c2); // TODO: change to cuBlas when implemented
         CALI_MARK_END(correctness);
         if(correct) {
-            std::cout << "Success!" << std::endl;
+            printf("Verification Successful!\n")
         }
         else {
-            std::cout << "Failure!" << std::endl;
+            printf("Verification Failed!\n")
         }
         // print_matrix(c);
     }
+
+    adiak::init(NULL);
+    adiak::launchdate();                                      // launch date of the job
+    adiak::libraries();                                       // Libraries used
+    adiak::cmdline();                                         // Command line used to launch the job
+    adiak::clustername();                                     // Name of the cluster
+    adiak::value("Algorithm", "Naive Matrix Multiplication"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+    adiak::value("ProgrammingModel", "MPI");                  // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int");                          // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int));              // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", n);                             // The number of elements in input dataset (1000)
+    // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
+    adiak::value("num_procs", numtasks); // The number of processors (MPI ranks)
+    // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
+    // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
+    adiak::value("group_num", group_number); // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Online") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     MPI_Finalize();
 
