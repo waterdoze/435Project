@@ -1,10 +1,10 @@
 #ifndef LIN_STRASS_H
 #define LIN_STRASS_H
-#include "../common.h"
 
 mat strassen(mat A, mat B)
 {
 
+    size_t N = A.size();
     // Base Case
     if (N == 2)
     {
@@ -47,7 +47,7 @@ mat strassen(mat A, mat B)
     return C;
 }
 
-void cpu_strass_naive(mat &A, mat &B, mat &C)
+void cpu_lin_strass(mat &A, mat &B, mat &C)
 {
     size_t N = A.size();
     if (N != A.at(0).size() || N != B.size() || N != B.at(0).size())

@@ -3,7 +3,8 @@
 #include <cstdio>
 #include <ctime>
 #include "../common.h"
-#include "./lin_naive.h"
+#include "lin_naive.h"
+#include "lin_strass.h"
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>

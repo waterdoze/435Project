@@ -1,6 +1,5 @@
 #ifndef LIN_NAIVE_H
 #define LIN_NAIVE_H
-#include "../common.h"
 
 void cpu_lin_naive(mat &A, mat &B, mat &C) {
 	size_t A_row = A.size();

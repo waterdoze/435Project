@@ -103,14 +103,15 @@
     of processers/threads, and also compare the runtime for different matrix sizes with the same number of processers/threads.
 
     matrix sizes:
+        128x128
+        256x256
         512x512
         1024x1024
-        2048x2048
-        4096x4096
+        //2048x2048 MAYBE 
 
     number of processers/threads:
         1 (sequential)
         4
         16
         64
-        256
+        128
