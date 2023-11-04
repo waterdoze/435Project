@@ -25,8 +25,16 @@ int main(int argc, char *argv[]) {
     MATRIX_SIZE = atoi(argv[2]);
     //Does it make sense to create a thread for every row/column?
 
-    BLOCKS = (MATRIX_SIZE*MATRIX_SIZE) / THREADS;
-    flaot *d_A, *d_B, *d_C;
+    //So we know we have threads amount of threads so can we calculate how blocks we need then?
+
+    BLOCKS = MATRIX_SIZE;
+    //When we pass in the thread count it's talking about
+    /*
+    Issues that it's threads per block
+    Essentially each block will take in threads amount of rows and cols and then send them to each block
+    thus there will be (n*n)/threads blocks with thread threads inside of it
+    */
+    int *d_A, *d_B, *d_C;
     cudaMalloc((void**)&d_A,)
     return 0;
 }
