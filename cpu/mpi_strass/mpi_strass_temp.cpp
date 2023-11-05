@@ -1,125 +1,245 @@
-#include "mpi.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+#include <ctime>
+#include <mpi.h>
 
-#include "../../common.h"
+using namespace std;
 
-#include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
-mat strassen(int n, mat m1, mat m2)
+// Define a function to add two matrices
+void matrixAdd(const vector<vector<int>> &A, const vector<vector<int>> &B, vector<vector<int>> &C, int size)
 {
-    // mat m3(n, std::vector<int>(n));
-    // strassen(n, m1, m2, m3, 0);
-    // return m3;
-
-    if (n <= 32)
+    for (int i = 0; i < size; i++)
     {
-        return cpu_naive(m1, m2, n);
+        for (int j = 0; j < size; j++)
+        {
+            C[i][j] = A[i][j] + B[i][j];
+        }
     }
-
-    int split_size = n / 2;
-
-    mat a = split(n, m1, 0, 0);                   // A11
-    mat b = split(n, m1, 0, split_size);          // A12
-    mat c = split(n, m1, split_size, 0);          // A21
-    mat d = split(n, m1, split_size, split_size); // A22
-
-    mat e = split(n, m2, 0, 0);                   // B11
-    mat f = split(n, m2, 0, split_size);          // B12
-    mat g = split(n, m2, split_size, 0);          // B21
-    mat h = split(n, m2, split_size, split_size); // B22
-
-    mat fh_sub = addsub_matricies(split_size, f, h, false);
-    mat s1 = strassen(split_size, a, fh_sub); // A11 * (B12 - B22)
-
-    mat ab_add = addsub_matricies(split_size, a, b, true);
-    mat s2 = strassen(split_size, ab_add, h); // (A11 + A12) * B22
-
-    mat cd_add = addsub_matricies(split_size, c, d, true);
-    mat s3 = strassen(split_size, cd_add, e); // (A21 + A22) * B11
-
-    mat ge_sub = addsub_matricies(split_size, g, e, false);
-    mat s4 = strassen(split_size, d, ge_sub); // A22 * (B21 - B11)
-
-    mat ad_add = addsub_matricies(split_size, a, d, true);
-    mat eh_add = addsub_matricies(split_size, e, h, true);
-    mat s5 = strassen(split_size, ad_add, eh_add); // (A11 + A22) * (B11 + B22)
-
-    mat bd_sub = addsub_matricies(split_size, b, d, false);
-    mat gh_add = addsub_matricies(split_size, g, h, true);
-    mat s6 = strassen(split_size, bd_sub, gh_add); // (A12 - A22) * (B21 + B22)
-
-    mat ac_sub = addsub_matricies(split_size, a, c, false);
-    mat ef_add = addsub_matricies(split_size, e, f, true);
-    mat s7 = strassen(split_size, ac_sub, ef_add); // (A11 - A21) * (B11 + B12)
-
-    mat s5_s4_add = addsub_matricies(split_size, s5, s4, true);            // S5 + S4
-    mat s5_s4_s2_sub = addsub_matricies(split_size, s5_s4_add, s2, false); // S5 + S4 - S2
-    mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true);        // P1 = S5 + S4 - S2 + S6
-
-    mat c12 = addsub_matricies(split_size, s1, s2, true); // S1 + S2
-
-    mat c21 = addsub_matricies(split_size, s3, s4, true); // S3 + S4
-
-    mat s5_s1_add = addsub_matricies(split_size, s5, s1, true);            // S5 + S1
-    mat s5_s1_s3_sub = addsub_matricies(split_size, s5_s1_add, s3, false); // S5 + S1 - S3
-    mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false);       // P7 = S5 + S1 - S3 - S7
-
-    return combine_matricies(split_size, c11, c12, c21, c22);
 }
 
-int main(int argc, char* argv[]) {
+// Define a function to subtract two matrices
+void matrixSub(const vector<vector<int>> &A, const vector<vector<int>> &B, vector<vector<int>> &C, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+        {
+            C[i][j] = A[i][j] - B[i][j];
+        }
+    }
+}
+
+// Define a function to split a matrix into four submatrices
+void splitMatrix(const vector<vector<int>> &A, vector<vector<int>> &A11, vector<vector<int>> &A12,
+                 vector<vector<int>> &A21, vector<vector<int>> &A22, int size)
+{
+    int newSize = size / 2;
+    for (int i = 0; i < newSize; i++)
+    {
+        for (int j = 0; j < newSize; j++)
+        {
+            A11[i][j] = A[i][j];
+            A12[i][j] = A[i][j + newSize];
+            A21[i][j] = A[i + newSize][j];
+            A22[i][j] = A[i + newSize][j + newSize];
+        }
+    }
+}
+
+// Define a function to combine four submatrices into a single matrix
+void combineMatrices(vector<vector<int>> &C, const vector<vector<int>> &C11, const vector<vector<int>> &C12,
+                     const vector<vector<int>> &C21, const vector<vector<int>> &C22, int size)
+{
+    int newSize = size / 2;
+    for (int i = 0; i < newSize; i++)
+    {
+        for (int j = 0; j < newSize; j++)
+        {
+            C[i][j] = C11[i][j];
+            C[i][j + newSize] = C12[i][j];
+            C[i + newSize][j] = C21[i][j];
+            C[i + newSize][j + newSize] = C22[i][j];
+        }
+    }
+}
+
+// Strassen's matrix multiplication algorithm
+void strassen(const vector<vector<int>> &A, const vector<vector<int>> &B, vector<vector<int>> &C, int size)
+{
+    if (size == 1)
+    {
+        C[0][0] = A[0][0] * B[0][0];
+        return;
+    }
+
+    int newSize = size / 2;
+
+    // Create submatrices
+    vector<vector<int>> A11(newSize, vector<int>(newSize));
+    vector<vector<int>> A12(newSize, vector<int>(newSize));
+    vector<vector<int>> A21(newSize, vector<int>(newSize));
+    vector<vector<int>> A22(newSize, vector<int>(newSize));
+    vector<vector<int>> B11(newSize, vector<int>(newSize));
+    vector<vector<int>> B12(newSize, vector<int>(newSize));
+    vector<vector<int>> B21(newSize, vector<int>(newSize));
+    vector<vector<int>> B22(newSize, vector<int>(newSize));
+
+    splitMatrix(A, A11, A12, A21, A22, size);
+    splitMatrix(B, B11, B12, B21, B22, size);
+
+    // Calculate intermediate matrices
+    vector<vector<int>> M1(newSize, vector<int>(newSize));
+    vector<vector<int>> M2(newSize, vector<int>(newSize));
+    vector<vector<int>> M3(newSize, vector<int>(newSize));
+    vector<vector<int>> M4(newSize, vector<int>(newSize));
+    vector<vector<int>> M5(newSize, vector<int>(newSize));
+    vector<vector<int>> M6(newSize, vector<int>(newSize));
+    vector<vector<int>> M7(newSize, vector<int>(newSize));
+
+    vector<vector<int>> C11(newSize, vector<int>(newSize));
+    vector<vector<int>> C12(newSize, vector<int>(newSize));
+    vector<vector<int>> C21(newSize, vector<int>(newSize));
+    vector<vector<int>> C22(newSize, vector<int>(newSize));
+
+    vector<vector<int>> AResult(newSize, vector<int>(newSize));
+    vector<vector<int>> BResult(newSize, vector<int>(newSize));
+
+    // Calculate M1, M2, M3, M4, M5, M6, M7
+    matrixAdd(A11, A22, AResult, newSize);
+    matrixAdd(B11, B22, BResult, newSize);
+    strassen(AResult, BResult, M1, newSize);
+
+    matrixAdd(A21, A22, AResult, newSize);
+    strassen(AResult, B11, M2, newSize);
+
+    matrixSub(B12, B22, BResult, newSize);
+    strassen(A11, BResult, M3, newSize);
+
+    matrixSub(B21, B11, BResult, newSize);
+    strassen(A22, BResult, M4, newSize);
+
+    matrixAdd(A11, A12, AResult, newSize);
+    strassen(AResult, B22, M5, newSize);
+
+    matrixSub(A21, A11, AResult, newSize);
+    matrixAdd(B11, B12, BResult, newSize);
+    strassen(AResult, BResult, M6, newSize);
+
+    matrixSub(A12, A22, AResult, newSize);
+    matrixAdd(B21, B22, BResult, newSize);
+    strassen(AResult, BResult, M7, newSize);
+
+    // Calculate C11, C12, C21, C22
+    matrixAdd(M1, M4, AResult, newSize);
+    matrixSub(M7, M5, BResult, newSize);
+    matrixAdd(AResult, BResult, C11, newSize);
+
+    matrixAdd(M3, M5, C12, newSize);
+
+    matrixAdd(M2, M4, C21, newSize);
+
+    matrixAdd(M1, M3, AResult, newSize);
+    matrixSub(M2, M6, BResult, newSize);
+    matrixAdd(AResult, BResult, C22, newSize);
+
+    // Combine submatrices to get the result
+    combineMatrices(C, C11, C12, C21, C22, size);
+}
+
+// Helper function to print a matrix
+void printMatrix(const vector<vector<int>> &matrix, int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
+            cout << matrix[i][j] << " ";
+    }
+    cout << endl;
+}
+
+int main(int argc, char *argv[])
+{
     MPI_Init(&argc, &argv);
 
     int rank, size;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank); // get current process id
-    MPI_Comm_size(MPI_COMM_WORLD, &size); // get number of processes
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    int n;
-    if (argc == 2) {
-        n = atoi(argv[1]);
-    } else {
-        printf("needs size of matrix\n");
-    }
+    // Size of the matrices (must be a power of 2)
+    const int n = 8;
+    const int matrixSize = 1 << n;
 
-    int local_n = n / size;
-
-    mat a(n, std::vector<int>(n));
-    mat b(n, std::vector<int>(n));
-    mat c(n, std::vector<int>(n));
-
-    if(rank == 0) {
-        get_random_matrix(a);
-        get_random_matrix(b);
-
-        // scatter
-        for(int i = 1; i < size; i++) {
-            MPI_Send(&a[i * local_n][0], local_n * n, MPI_INT, i, 0, MPI_COMM_WORLD);
-            MPI_Send(&b[i * local_n][0], local_n * n, MPI_INT, i, 0, MPI_COMM_WORLD);
+    if (size != 4)
+    {
+        if (rank == 0)
+        {
+            cout << "This program must be run with 4 processes." << endl;
         }
-    } else {
-        MPI_Recv(&a[0][0], local_n * n, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&b[0][0], local_n * n, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Finalize();
+        return 1;
     }
 
-    mat local_c(local_n, std::vector<int>(n));
+    if (matrixSize % size != 0)
+    {
+        if (rank == 0)
+        {
+            cout << "Matrix size must be divisible by the number of processes." << endl;
+        }
+        MPI_Finalize();
+        return 1;
+    }
 
-    // do strassen
-    local_c = strassen(local_n, a, b);
+    vector<vector<int>> A(matrixSize, vector<int>(matrixSize));
+    vector<vector<int>> B(matrixSize, vector<int>(matrixSize));
+    vector<vector<int>> C(matrixSize, vector<int>(matrixSize));
 
-    // gather
-    if(rank == 0) {
-        for(int i = 0; i < local_n; i++) {
-            for(int j = 0; j < n; j++) {
-                c[i][j] = local_c[i][j];
+    // Initialize matrices A and B with random values
+    if (rank == 0)
+    {
+        srand(static_cast<unsigned int>(time(NULL)));
+        for (int i = 0; i < matrixSize; i++)
+        {
+            for (int j = 0; j < matrixSize; j++)
+            {
+                A[i][j] = rand() % 10;
+                B[i][j] = rand() % 10;
             }
         }
+    }
 
-        for(int i = 1; i < size; i++) {
-            MPI_Recv(&c[i * local_n][0], local_n * n, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        }
-    } else {
-        MPI_Send(&local_c[0][0], local_n * n, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    // Scatter the matrices A and B to all processes
+    MPI_Bcast(&A[0][0], matrixSize * matrixSize, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&B[0][0], matrixSize * matrixSize, MPI_INT, 0, MPI_COMM_WORLD);
+
+    const int blockSize = matrixSize / size;
+    vector<vector<int>> localA(blockSize, vector<int>(matrixSize));
+    vector<vector<int>> localB(blockSize, vector<int>(matrixSize));
+    vector<vector<int>> localC(blockSize, vector<int>(matrixSize));
+
+    // Scatter blocks of A and B to all processes
+    MPI_Scatter(&A[0][0], blockSize * matrixSize, MPI_INT, &localA[0][0], blockSize * matrixSize, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatter(&B[0][0], blockSize * matrixSize, MPI_INT, &localB[0][0], blockSize * matrixSize, MPI_INT, 0, MPI_COMM_WORLD);
+
+    // Perform local matrix multiplication using Strassen's algorithm
+    strassen(localA, localB, localC, blockSize);
+
+    // Gather the results from all processes
+    MPI_Gather(&localC[0][0], blockSize * matrixSize, MPI_INT, &C[0][0], blockSize * matrixSize, MPI_INT, 0, MPI_COMM_WORLD);
+
+    if (rank == 0)
+    {
+        cout << "Matrix A:" << endl;
+        printMatrix(A, matrixSize);
+
+        cout << "Matrix B:" << endl;
+        printMatrix(B, matrixSize);
+
+        cout << "Result C:" << endl;
+        printMatrix(C, matrixSize);
     }
 
     MPI_Finalize();
+
+    return 0;
 }

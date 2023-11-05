@@ -4,14 +4,34 @@
 
 #include "../../common.h"
 
-#include "../../linear/lin_naive.h" // TODO: change to cuBlas when implemented
-
 #define MASTER 0
 #define FROM_MASTER 1
 #define FROM_WORKER 2
 
 mat strassen(int n, mat m1, mat m2);
 void strassen(int n, mat m1, mat m2, mat &m3, int taskid);
+void cpu_lin_naive(mat &A, mat &B, mat &C)
+{
+    size_t A_row = A.size();
+    size_t A_column = A[0].size();
+    size_t B_row = B.size();
+    size_t B_column = B[0].size();
+    size_t C_row = C.size();
+    size_t C_column = C[0].size();
+
+    for (size_t i = 0; i < A_row; ++i)
+    {
+        for (size_t j = 0; j < B_column; ++j)
+        {
+            float tmp = 0.0;
+            for (size_t k = 0; k < A_column; ++k)
+            {
+                tmp += A[i][k] * B[k][j];
+            }
+            C[i][j] = tmp;
+        }
+    }
+}
 
 /* Define Caliper region names */
 const char *comm = "comm";
@@ -25,18 +45,18 @@ const char *correctness = "correctness";
 
 const char *strassen_whole_computation = "strassen_whole_computation";
 const char *bcast_n = "bcast_n";
-const char *bcase_matricies = "bcast_matrix";
-const char *split = "split";
+const char *bcast_matricies = "bcast_matricies";
+const char *splits = "splits";
 const char *addsub = "addsub";
 const char *combine = "combine";
-const char *strassen = "strassen";
+const char *strassens = "strassens";
 const char *worker_send = "worker_send";
 const char *master_receive = "master_receive";
 const char *master_combine = "master_combine";
-const char *MPI_Barrier = "MPI_Barrier";
+const char *mpi_barrier = "mpi_barrier";
 
-
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
 
     CALI_CXX_MARK_FUNCTION;
     int taskid, numtasks;
@@ -46,16 +66,17 @@ int main(int argc, char* argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
 
     int n;
-    if (argc != 2) {
+    if (argc != 2)
+    {
         std::cout << "include matrix size" << std::endl;
         return 1;
     }
     n = atoi(argv[1]);
 
     CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(MPI_Barrier)
+    CALI_MARK_BEGIN(mpi_barrier);
     MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(MPI_Barrier)
+    CALI_MARK_END(mpi_barrier);
     CALI_MARK_END(comm);
 
     CALI_MARK_BEGIN(comm);
@@ -67,24 +88,46 @@ int main(int argc, char* argv[]) {
     mat b(n, std::vector<int>(n));
     mat c(n, std::vector<int>(n));
 
-    if(taskid == MASTER) {
+    if (taskid == MASTER)
+    {
+        printf("n: %d, processes: %d\n", n, numtasks);
         CALI_MARK_BEGIN(data_init);
         get_random_matrix(a);
         get_random_matrix(b);
         CALI_MARK_END(data_init);
+
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                printf("%d ", a[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                printf("%d ", b[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
     }
 
     CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(MPI_Barrier);
+    CALI_MARK_BEGIN(mpi_barrier);
     MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(MPI_Barrier);
+    CALI_MARK_END(mpi_barrier);
     CALI_MARK_END(comm);
 
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_large);
     CALI_MARK_BEGIN(bcast_matricies);
-    MPI_Bcast(&a[0][0], n*n, MPI_INT, MASTER, MPI_COMM_WORLD);
-    MPI_Bcast(&b[0][0], n*n, MPI_INT, MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(&a[0][0], n * n, MPI_INT, MASTER, MPI_COMM_WORLD);
+    MPI_Bcast(&b[0][0], n * n, MPI_INT, MASTER, MPI_COMM_WORLD);
     CALI_MARK_END(bcast_matricies);
     CALI_MARK_END(comm_large);
     CALI_MARK_END(comm);
@@ -98,22 +141,43 @@ int main(int argc, char* argv[]) {
     CALI_MARK_END(comp);
 
     CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(MPI_Barrier);
+    CALI_MARK_BEGIN(mpi_barrier);
     MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(MPI_Barrier);
+    CALI_MARK_END(mpi_barrier);
     CALI_MARK_END(comm);
 
-    if(taskid == MASTER) {
+    if (taskid == MASTER)
+    {
         mat c2(n, std::vector<int>(n));
         cpu_lin_naive(a, b, c2);
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                printf("%d ", c[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                printf("%d ", c2[i][j]);
+            }
+            printf("\n");
+        }
+        printf("\n");
         CALI_MARK_BEGIN(correctness);
         bool correct = verify(c, c2); // TODO: change to cuBlas when implemented
         CALI_MARK_END(correctness);
-        if(correct) {
-            printf("Verification Successful!\n")
+        if (correct)
+        {
+            printf("Verification Successful!\n");
         }
-        else {
-            printf("Verification Failed!\n")
+        else
+        {
+            printf("Verification Failed!\n");
         }
         // print_matrix(c);
     }
@@ -132,33 +196,37 @@ int main(int argc, char* argv[]) {
     adiak::value("num_procs", numtasks); // The number of processors (MPI ranks)
     // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
     // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
-    adiak::value("group_num", group_number); // The number of your group (integer, e.g., 1, 10)
-    adiak::value("implementation_source", "Online") // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
+    adiak::value("group_num", 8);                    // The number of your group (integer, e.g., 1, 10)
+    adiak::value("implementation_source", "Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     MPI_Finalize();
 
     return 0;
 }
 
-mat strassen(int n, mat m1, mat m2) {
+mat strassen(int n, mat m1, mat m2)
+{
     // mat m3(n, std::vector<int>(n));
     // strassen(n, m1, m2, m3, 0);
     // return m3;
 
-    if(n <= 32) {
-        return cpu_naive(m1, m2, n);
+    if (n <= 32)
+    {
+        mat m3(n, std::vector<int>(n));
+        cpu_lin_naive(m1, m2, m3);
+        return m3;
     }
 
     int split_size = n / 2;
 
-    mat a = split(n, m1, 0, 0); // A11
-    mat b = split(n, m1, 0, split_size); // A12
-    mat c = split(n, m1, split_size, 0); // A21
+    mat a = split(n, m1, 0, 0);                   // A11
+    mat b = split(n, m1, 0, split_size);          // A12
+    mat c = split(n, m1, split_size, 0);          // A21
     mat d = split(n, m1, split_size, split_size); // A22
 
-    mat e = split(n, m2, 0, 0); // B11
-    mat f = split(n, m2, 0, split_size); // B12
-    mat g = split(n, m2, split_size, 0); // B21
+    mat e = split(n, m2, 0, 0);                   // B11
+    mat f = split(n, m2, 0, split_size);          // B12
+    mat g = split(n, m2, split_size, 0);          // B21
     mat h = split(n, m2, split_size, split_size); // B22
 
     mat fh_sub = addsub_matricies(split_size, f, h, false);
@@ -185,42 +253,45 @@ mat strassen(int n, mat m1, mat m2) {
     mat ef_add = addsub_matricies(split_size, e, f, true);
     mat s7 = strassen(split_size, ac_sub, ef_add); // (A11 - A21) * (B11 + B12)
 
-    mat s5_s4_add = addsub_matricies(split_size, s5, s4, true); // S5 + S4
+    mat s5_s4_add = addsub_matricies(split_size, s5, s4, true);            // S5 + S4
     mat s5_s4_s2_sub = addsub_matricies(split_size, s5_s4_add, s2, false); // S5 + S4 - S2
-    mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true); // P1 = S5 + S4 - S2 + S6
+    mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true);        // P1 = S5 + S4 - S2 + S6
 
     mat c12 = addsub_matricies(split_size, s1, s2, true); // S1 + S2
 
     mat c21 = addsub_matricies(split_size, s3, s4, true); // S3 + S4
 
-    mat s5_s1_add = addsub_matricies(split_size, s5, s1, true); // S5 + S1
+    mat s5_s1_add = addsub_matricies(split_size, s5, s1, true);            // S5 + S1
     mat s5_s1_s3_sub = addsub_matricies(split_size, s5_s1_add, s3, false); // S5 + S1 - S3
-    mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false); // P7 = S5 + S1 - S3 - S7
+    mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false);       // P7 = S5 + S1 - S3 - S7
 
     return combine_matricies(split_size, c11, c12, c21, c22);
 }
 
-void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
+void strassen(int n, mat m1, mat m2, mat &m3, int taskid)
+{
 
-    if (n <= 32) {
-        return cpu_naive(A, B, n); // TODO: change to cuBlas when implemented
+    if (n <= 32)
+    {
+        cpu_lin_naive(m1, m2, m3); // TODO: change to cuBlas when implemented
+        return;
     }
 
     CALI_MARK_BEGIN(comp);
     CALI_MARK_BEGIN(comp_small);
-    CALI_MARK_BEGIN(split);
+    CALI_MARK_BEGIN(splits);
     int split_size = n / 2;
 
-    mat a = split(n, A, 0, 0); // A11
-    mat b = split(n, A, 0, split_size); // A12
-    mat c = split(n, A, split_size, 0); // A21
-    mat d = split(n, A, split_size, split_size); // A22
+    mat a = split(n, m1, 0, 0);                   // A11
+    mat b = split(n, m1, 0, split_size);          // A12
+    mat c = split(n, m1, split_size, 0);          // A21
+    mat d = split(n, m1, split_size, split_size); // A22
 
-    mat e = split(n, B, 0, 0); // B11
-    mat f = split(n, B, 0, split_size); // B12
-    mat g = split(n, B, split_size, 0); // B21
-    mat h = split(n, B, split_size, split_size); // B22
-    CALI_MARK_END(split);
+    mat e = split(n, m2, 0, 0);                   // B11
+    mat f = split(n, m2, 0, split_size);          // B12
+    mat g = split(n, m2, split_size, 0);          // B21
+    mat h = split(n, m2, split_size, split_size); // B22
+    CALI_MARK_END(splits);
     CALI_MARK_END(comp_small);
     CALI_MARK_END(comp);
 
@@ -232,22 +303,24 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
     mat s6(split_size, std::vector<int>(split_size));
     mat s7(split_size, std::vector<int>(split_size));
 
-    if(taskid == 0) {
+    if (taskid == 0)
+    {
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_large);
         CALI_MARK_BEGIN(master_receive);
-        MPI_Recv(&(s1[0][0]), split_size*split_size, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s2[0][0]), split_size*split_size, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s3[0][0]), split_size*split_size, MPI_INT, 3, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s4[0][0]), split_size*split_size, MPI_INT, 4, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s5[0][0]), split_size*split_size, MPI_INT, 5, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s6[0][0]), split_size*split_size, MPI_INT, 6, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s7[0][0]), split_size*split_size, MPI_INT, 7, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s1[0][0]), split_size * split_size, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s2[0][0]), split_size * split_size, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s3[0][0]), split_size * split_size, MPI_INT, 3, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s4[0][0]), split_size * split_size, MPI_INT, 4, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s5[0][0]), split_size * split_size, MPI_INT, 5, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s6[0][0]), split_size * split_size, MPI_INT, 6, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s7[0][0]), split_size * split_size, MPI_INT, 7, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         CALI_MARK_END(master_receive);
         CALI_MARK_END(comm_large);
         CALI_MARK_END(comm);
     }
-    if(taskid == 1) {
+    if (taskid == 1)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -258,21 +331,22 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s1 = strassen(split_size, a, fh_sub);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s1[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s1[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
     }
-    if(taskid == 2) {
+    if (taskid == 2)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -283,21 +357,22 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s2 = strassen(split_size, ab_add, h);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s2[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s2[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
     }
-    if(taskid == 3) {
+    if (taskid == 3)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -308,21 +383,22 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s3 = strassen(split_size, cd_add, e);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s3[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s3[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
     }
-    if(taskid == 4) {
+    if (taskid == 4)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -333,21 +409,22 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s4 = strassen(split_size, d, ge_sub);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s4[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s4[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
     }
-    if(taskid == 5) {
+    if (taskid == 5)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -366,21 +443,22 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s5 = strassen(split_size, ad_add, eh_add);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s5[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s5[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
     }
-    if(taskid == 6) {
+    if (taskid == 6)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -399,21 +477,22 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s6 = strassen(split_size, bd_sub, eg_add);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s6[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s6[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
     }
-    if(taskid == 7) {
+    if (taskid == 7)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
@@ -432,16 +511,16 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassen);
+        CALI_MARK_BEGIN(strassens);
         s7 = strassen(split_size, ac_sub, eg_add);
-        CALI_MARK_END(strassen);
+        CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
 
         CALI_MARK_BEGIN(comm);
         CALI_MARK_BEGIN(comm_small);
         CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s7[0][0]), split_size*split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(&(s7[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(worker_send);
         CALI_MARK_END(comm_small);
         CALI_MARK_END(comm);
@@ -449,27 +528,28 @@ void strassen(int n, mat m1, mat m2, mat& m3, int taskid) {
 
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_large);
-    CALI_MARK_BEGIN(MPI_Barrier);
+    CALI_MARK_BEGIN(mpi_barrier);
     MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(MPI_Barrier);
+    CALI_MARK_END(mpi_barrier);
     CALI_MARK_END(comm_large);
     CALI_MARK_END(comm);
 
-    if(taskid == 0) {
+    if (taskid == 0)
+    {
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_large);
         CALI_MARK_BEGIN(combine);
-        mat s5_s4_add = addsub_matricies(split_size, s5, s4, true); // S5 + S4
+        mat s5_s4_add = addsub_matricies(split_size, s5, s4, true);            // S5 + S4
         mat s5_s4_s2_sub = addsub_matricies(split_size, s5_s4_add, s2, false); // S5 + S4 - S2
-        mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true); // P1 = S5 + S4 - S2 + S6
+        mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true);        // P1 = S5 + S4 - S2 + S6
 
         mat c12 = addsub_matricies(split_size, s1, s2, true); // S1 + S2
 
         mat c21 = addsub_matricies(split_size, s3, s4, true); // S3 + S4
 
-        mat s5_s1_add = addsub_matricies(split_size, s5, s1, true); // S5 + S1
+        mat s5_s1_add = addsub_matricies(split_size, s5, s1, true);            // S5 + S1
         mat s5_s1_s3_sub = addsub_matricies(split_size, s5_s1_add, s3, false); // S5 + S1 - S3
-        mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false); // P7 = S5 + S1 - S3 - S7
+        mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false);       // P7 = S5 + S1 - S3 - S7
 
         m3 = combine_matricies(split_size, c11, c12, c21, c22);
         CALI_MARK_END(combine);
