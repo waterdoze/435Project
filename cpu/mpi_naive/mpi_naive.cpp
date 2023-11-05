@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     adiak::value("ProgrammingModel", "MPI");          // e.g., "MPI", "CUDA", "MPIwithCUDA"
     adiak::value("Datatype", int);                          // The datatype of input elements (e.g., double, int, float)
     adiak::value("SizeOfDatatype", sizeof(int));              // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
-    adiak::value("InputSize", N;                        // The number of elements in input dataset (1000)
+    adiak::value("InputSize", N);                        // The number of elements in input dataset (1000)
     // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", size);                        // The number of processors (MPI ranks)
     // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
