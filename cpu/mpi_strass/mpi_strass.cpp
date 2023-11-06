@@ -364,8 +364,8 @@ bool check(int n, int **prod1, int **prod2)
 
 int main(int argc, char *argv[])
 {
-    int p_rank;
-    int num_process;
+    int rank;
+    int size;
 
     if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
     {
@@ -373,8 +373,8 @@ int main(int argc, char *argv[])
         return 0;
     }
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &p_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_process);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     int n;
     n = atoi(argv[1]);
@@ -384,8 +384,11 @@ int main(int argc, char *argv[])
     int **mat1 = allocateMatrix(n);
     int **mat2 = allocateMatrix(n);
 
-    if (p_rank == 0)
+    if (rank == 0)
     {
+        printf("Matrix Size: %d\n", n);
+        printf("Number of Processes: %d\n", size);
+
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < n; j++)
@@ -404,15 +407,15 @@ int main(int argc, char *argv[])
     double startTime = MPI_Wtime();
 
     int **prod;
-    strassen(n, mat1, mat2, prod, p_rank);
+    strassen(n, mat1, mat2, prod, rank);
 
     double endTime = MPI_Wtime();
 
-    if (p_rank == 0)
+    if (rank == 0)
     {
         printf("\nParallel Strassen Runtime (MPI): ");
         printf("%.5f\n\n", endTime - startTime);
-        print(n, prod);
+        // print(n, prod);
         int **naive_prod = naive(n, mat1, mat2);
         if (check(n, prod, naive_prod))
             cout << "Verification Passed!" << endl;
