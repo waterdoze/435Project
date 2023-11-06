@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.12)
+make_minimum_required(VERSION 3.12)
 
-project(cuda_main LANGUAGES CUDA CXX)
+project(cuda LANGUAGES CUDA CXX)
 
 find_package(MPI REQUIRED)
 find_package(caliper REQUIRED)
 find_package(adiak REQUIRED)
 
-add_executable(cuda_main cuda_main.cu)
+add_executable(cuda cuda_main.cu)
 
 message(STATUS "MPI includes : ${MPI_INCLUDE_PATH}")
 message(STATUS "CUDA includes : ${CUDA_INCLUDE_DIRS}")
@@ -17,5 +17,5 @@ include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${caliper_INCLUDE_DIR})
 include_directories(${adiak_INCLUDE_DIRS})
 
-target_link_libraries(cuda_main PRIVATE MPI::MPI_CXX)
-target_link_libraries(cuda_main PRIVATE caliper)
+target_link_libraries(cuda PRIVATE MPI::MPI_CXX)
+target_link_libraries(cuda PRIVATE caliper)

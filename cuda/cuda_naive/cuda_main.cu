@@ -7,9 +7,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <ctime>
-#include "../common.h"
-#include "./cuda_naive.h"
-#include "./cuda_strass.h"
+#include <cublas.h>
 
 
 #include <caliper/cali.h>
@@ -132,6 +130,8 @@ int main(int argc, char *argv[]) {
     cudaFree(d_b);
     cudaFree(d_c);
 
+
+    
     return 0;
 }
 
