@@ -15,26 +15,26 @@ int main(int argc, char *argv[])
     CALI_CXX_MARK_FUNCTION;
 
     int i, j, k, rank, size, sum = 0;
-    int N; // Matrix size
+    int n; // Matrix size
     if(argc == 2) {
-        N = atoi(argv[1]);
+        n = atoi(argv[1]);
     }
     else {
         printf("Please provide a matrix size\n");
         return 1;
     }
 
-    int a[N][N]; // Matrix A
-    int b[N][N]; // Matrix B
-    int c[N][N]; // Result Matrix C
+    int a[n][n]; // Matrix A
+    int b[n][n]; // Matrix B
+    int c[n][n]; // Result Matrix C
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size); // number of processes
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); // rank of each process
 
-    int aRows[N / size][N];   // hold rows of matrix A to be scattered
-    int cCols[N / size][N];   // hold columns of matrix C to be gathered
-    int block = N * N / size; // number of elements in each block
+    int aRows[n / size][n];   // hold rows of matrix A to be scattered
+    int cCols[n / size][n];   // hold columns of matrix C to be gathered
+    int block = n * n / size; // number of elements in each block
 
     /* Define Caliper region names */
     const char* data_init = "data_init";
@@ -59,14 +59,14 @@ int main(int argc, char *argv[])
 
     if (rank == 0)
     {
-        printf("Matrix Size: %d\n", N);
+        printf("Matrix Size: %d\n", n);
         printf("Number of Processes: %d\n", size);
 
         CALI_MARK_BEGIN(data_init);
         // initialize matrices
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < n; i++)
         {
-            for (int j = 0; j < N; j++)
+            for (int j = 0; j < n; j++)
             {
                 a[i][j] = rand() % 10 + 1;
                 b[i][j] = rand() % 10 + 1;
@@ -74,9 +74,9 @@ int main(int argc, char *argv[])
         }
         CALI_MARK_END(data_init);
 
-        // for (i = 0; i < N; i++)
+        // for (i = 0; i < n; i++)
         // {
-        //     for (j = 0; j < N; j++)
+        //     for (j = 0; j < n; j++)
         //     {
         //         printf(" %d", a[i][j]);
         //     }
@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
         // }
         // printf("\n");
 
-        // for (i = 0; i < N; i++)
+        // for (i = 0; i < n; i++)
         // {
-        //     for (j = 0; j < N; j++)
+        //     for (j = 0; j < n; j++)
         //     {
         //         printf(" %d", b[i][j]);
         //     }
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
     CALI_MARK_BEGIN(comm_large);
     CALI_MARK_BEGIN(bcast);
     // broadcast second matrix to all processes
-    MPI_Bcast(b, N * N, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(b, n * n, MPI_INT, 0, MPI_COMM_WORLD);
     CALI_MARK_END(bcast);
     CALI_MARK_END(comm_large);
     CALI_MARK_END(comm);
@@ -123,11 +123,11 @@ int main(int argc, char *argv[])
     CALI_MARK_BEGIN(comp);
     CALI_MARK_BEGIN(comp_small);
     // perform vector multiplication by all processes
-    for (i = 0; i < N / size; i++)
+    for (i = 0; i < n / size; i++)
     {
-        for (j = 0; j < N; j++)
+        for (j = 0; j < n; j++)
         {
-            for (k = 0; k < N; k++)
+            for (k = 0; k < n; k++)
             {
                 sum += aRows[i][k] * b[k][j];
             }
@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
     adiak::value("ProgrammingModel", "MPI");          // e.g., "MPI", "CUDA", "MPIwithCUDA"
     adiak::value("Datatype", int);                          // The datatype of input elements (e.g., double, int, float)
     adiak::value("SizeOfDatatype", sizeof(int));              // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
-    adiak::value("InputSize", N);                        // The number of elements in input dataset (1000)
+    adiak::value("InputSize", n);                        // The number of elements in input dataset (1000)
     // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", size);                        // The number of processors (MPI ranks)
     // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
@@ -177,9 +177,9 @@ int main(int argc, char *argv[])
     if (rank == 0)
     {
         // Print out the result matrix
-        // for (i = 0; i < N; i++)
+        // for (i = 0; i < n; i++)
         // {
-        //     for (j = 0; j < N; j++)
+        //     for (j = 0; j < n; j++)
         //     {
         //         printf(" %d", c[i][j]);
         //     }
@@ -189,22 +189,22 @@ int main(int argc, char *argv[])
 
         CALI_MARK_BEGIN(correctness);
         // check if result is correct
-        int correct[N][N];
-        for (int i = 0; i < N; i++)
+        int correct[n][n];
+        for (int i = 0; i < n; i++)
         {
-            for (int j = 0; j < N; j++)
+            for (int j = 0; j < n; j++)
             {
                 correct[i][j] = 0;
-                for (int k = 0; k < N; k++)
+                for (int k = 0; k < n; k++)
                 {
                     correct[i][j] += a[i][k] * b[k][j];
                 }
             }
         }
 
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < n; i++)
         {
-            for (int j = 0; j < N; j++)
+            for (int j = 0; j < n; j++)
             {
                 // printf(" %d", correct[i][j]);
                 if (correct[i][j] != c[i][j])

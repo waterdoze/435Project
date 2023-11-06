@@ -1,559 +1,426 @@
-#include "mpi.h"
-#include <stdio.h>
-#include <stdlib.h>
+#include <mpi.h>
+#include <bits/stdc++.h>
 
-#include "../../common.h"
+using namespace std;
 
-#define MASTER 0
-#define FROM_MASTER 1
-#define FROM_WORKER 2
-
-mat strassen(int n, mat m1, mat m2);
-void strassen(int n, mat m1, mat m2, mat &m3, int taskid);
-void cpu_lin_naive(mat &A, mat &B, mat &C)
+void print(int n, int **mat)
 {
-    size_t A_row = A.size();
-    size_t A_column = A[0].size();
-    size_t B_row = B.size();
-    size_t B_column = B[0].size();
-    size_t C_row = C.size();
-    size_t C_column = C[0].size();
-
-    for (size_t i = 0; i < A_row; ++i)
+    for (int i = 0; i < n; i++)
     {
-        for (size_t j = 0; j < B_column; ++j)
+        for (int j = 0; j < n; j++)
         {
-            float tmp = 0.0;
-            for (size_t k = 0; k < A_column; ++k)
-            {
-                tmp += A[i][k] * B[k][j];
-            }
-            C[i][j] = tmp;
+            printf(" %d", mat[i][j]);
         }
+        printf("\n");
     }
+    printf("\n");
 }
 
-/* Define Caliper region names */
-const char *comm = "comm";
-const char *comm_large = "comm_large";
-const char *comm_small = "comm_small";
-const char *comp = "comp";
-const char *comp_large = "comp_large";
-const char *comp_small = "comp_small";
-const char *data_init = "data_init";
-const char *correctness = "correctness";
+int **allocateMatrix(int n)
+{
+    int *data = (int *)malloc(n * n * sizeof(int));
+    int **array = (int **)malloc(n * sizeof(int *));
+    for (int i = 0; i < n; i++)
+    {
+        array[i] = &(data[n * i]);
+    }
+    return array;
+}
 
-const char *strassen_whole_computation = "strassen_whole_computation";
-const char *bcast_n = "bcast_n";
-const char *bcast_matricies = "bcast_matricies";
-const char *splits = "splits";
-const char *addsub = "addsub";
-const char *combine = "combine";
-const char *strassens = "strassens";
-const char *worker_send = "worker_send";
-const char *master_receive = "master_receive";
-const char *master_combine = "master_combine";
-const char *mpi_barrier = "mpi_barrier";
+void freeMatrix(int n, int **mat)
+{
+    free(mat[0]);
+    free(mat);
+}
+
+int **naive(int n, int **mat1, int **mat2)
+{
+    int **prod = allocateMatrix(n);
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            prod[i][j] = 0;
+            for (int k = 0; k < n; k++)
+            {
+                prod[i][j] += mat1[i][k] * mat2[k][j];
+            }
+        }
+    }
+
+    return prod;
+}
+
+int **getSlice(int n, int **mat, int offseti, int offsetj)
+{
+    int m = n / 2;
+    int **slice = allocateMatrix(m);
+    for (int i = 0; i < m; i++)
+    {
+        for (int j = 0; j < m; j++)
+        {
+            slice[i][j] = mat[offseti + i][offsetj + j];
+        }
+    }
+    return slice;
+}
+
+int **addMatrices(int n, int **mat1, int **mat2, bool add)
+{
+    int **result = allocateMatrix(n);
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (add)
+                result[i][j] = mat1[i][j] + mat2[i][j];
+            else
+                result[i][j] = mat1[i][j] - mat2[i][j];
+        }
+    }
+
+    return result;
+}
+
+int **combineMatrices(int m, int **c11, int **c12, int **c21, int **c22)
+{
+    int n = 2 * m;
+    int **result = allocateMatrix(n);
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (i < m && j < m)
+                result[i][j] = c11[i][j];
+            else if (i < m)
+                result[i][j] = c12[i][j - m];
+            else if (j < m)
+                result[i][j] = c21[i - m][j];
+            else
+                result[i][j] = c22[i - m][j - m];
+        }
+    }
+
+    return result;
+}
+
+int **strassen(int n, int **mat1, int **mat2)
+{
+
+    if (n <= 32)
+    {
+        return naive(n, mat1, mat2);
+    }
+
+    int m = n / 2;
+
+    int **a = getSlice(n, mat1, 0, 0); // A11
+    int **b = getSlice(n, mat1, 0, m); // A12
+    int **c = getSlice(n, mat1, m, 0); // A21
+    int **d = getSlice(n, mat1, m, m); // A22
+    int **e = getSlice(n, mat2, 0, 0); // B11
+    int **f = getSlice(n, mat2, 0, m); // B12
+    int **g = getSlice(n, mat2, m, 0); // B21
+    int **h = getSlice(n, mat2, m, m); // B22
+
+    int **fh_sub = addMatrices(m, f, h, false); // B12 - B22
+    int **s1 = strassen(m, a, fh_sub);
+    freeMatrix(m, fh_sub);
+
+    int **ab_add = addMatrices(m, a, b, true); // A11 + A12
+    int **s2 = strassen(m, ab_add, h);
+    freeMatrix(m, ab_add);
+
+    int **cd_add = addMatrices(m, c, d, true); // A21 + A22
+    int **s3 = strassen(m, cd_add, e);
+    freeMatrix(m, cd_add);
+
+    int **ge_sub = addMatrices(m, g, e, false); // B21 - B11
+    int **s4 = strassen(m, d, ge_sub);
+    freeMatrix(m, ge_sub);
+
+    int **ad_add = addMatrices(m, a, d, true); // A11 + A22
+    int **eh_add = addMatrices(m, e, h, true); // B11 + B22
+    int **s5 = strassen(m, ad_add, eh_add);
+    freeMatrix(m, ad_add);
+    freeMatrix(m, eh_add);
+
+    int **bd_sub = addMatrices(m, b, d, false); // B12 - B22
+    int **gh_add = addMatrices(m, g, h, true);  // B21 + B22
+    int **s6 = strassen(m, bd_sub, gh_add);
+    freeMatrix(m, bd_sub);
+    freeMatrix(m, gh_add);
+
+    int **ac_sub = addMatrices(m, a, c, false); // A11 - A21
+    int **ef_add = addMatrices(m, e, f, true);  // B11 + B12
+    int **s7 = strassen(m, ac_sub, ef_add);
+    freeMatrix(m, ac_sub);
+    freeMatrix(m, ef_add);
+
+    freeMatrix(m, a);
+    freeMatrix(m, b);
+    freeMatrix(m, c);
+    freeMatrix(m, d);
+    freeMatrix(m, e);
+    freeMatrix(m, f);
+    freeMatrix(m, g);
+    freeMatrix(m, h);
+
+    int **s4s5_add = addMatrices(m, s4, s5, true);         // S4 + S5
+    int **s2s6_sub = addMatrices(m, s2, s6, false);        // S2 - S6
+    int **c11 = addMatrices(m, s4s5_add, s2s6_sub, false); // C11 = S4 + S5 - S2 + S6
+    freeMatrix(m, s4s5_add);
+    freeMatrix(m, s2s6_sub);
+
+    int **c12 = addMatrices(m, s1, s2, true); // S1 + S2
+
+    int **c21 = addMatrices(m, s3, s4, true); // S3 + S4
+
+    int **s1s5_add = addMatrices(m, s1, s5, true);         // S1 + S5
+    int **s3s7_add = addMatrices(m, s3, s7, true);         // S3 + S7
+    int **c22 = addMatrices(m, s1s5_add, s3s7_add, false); // C22 = S1 + S5 - S3 - S7
+    freeMatrix(m, s1s5_add);
+    freeMatrix(m, s3s7_add);
+
+    freeMatrix(m, s1);
+    freeMatrix(m, s2);
+    freeMatrix(m, s3);
+    freeMatrix(m, s4);
+    freeMatrix(m, s5);
+    freeMatrix(m, s6);
+    freeMatrix(m, s7);
+
+    int **prod = combineMatrices(m, c11, c12, c21, c22);
+
+    freeMatrix(m, c11);
+    freeMatrix(m, c12);
+    freeMatrix(m, c21);
+    freeMatrix(m, c22);
+
+    return prod;
+}
+
+void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
+{
+
+    if (n == 1)
+    {
+        prod = allocateMatrix(1);
+        prod[0][0] = mat1[0][0] * mat2[0][0];
+    }
+
+    int m = n / 2;
+
+    int **a = getSlice(n, mat1, 0, 0); // A11
+    int **b = getSlice(n, mat1, 0, m); // A12
+    int **c = getSlice(n, mat1, m, 0); // A21
+    int **d = getSlice(n, mat1, m, m); // A22
+    int **e = getSlice(n, mat2, 0, 0); // B11
+    int **f = getSlice(n, mat2, 0, m); // B12
+    int **g = getSlice(n, mat2, m, 0); // B21
+    int **h = getSlice(n, mat2, m, m); // B22
+
+    int **s1 = allocateMatrix(m);
+    int **s2 = allocateMatrix(m);
+    int **s3 = allocateMatrix(m);
+    int **s4 = allocateMatrix(m);
+    int **s5 = allocateMatrix(m);
+    int **s6 = allocateMatrix(m);
+    int **s7 = allocateMatrix(m);
+
+    if (rank == 0)
+    {
+        MPI_Recv(&(s1[0][0]), m * m, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s2[0][0]), m * m, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s3[0][0]), m * m, MPI_INT, 3, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s4[0][0]), m * m, MPI_INT, 4, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s5[0][0]), m * m, MPI_INT, 5, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s6[0][0]), m * m, MPI_INT, 6, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&(s7[0][0]), m * m, MPI_INT, 7, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    }
+
+    if (rank == 1)
+    {
+        int **fh_sub = addMatrices(m, f, h, false); // B12 - B22
+        s1 = strassen(m, a, fh_sub);
+        freeMatrix(m, fh_sub);
+        MPI_Send(&(s1[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == 2)
+    {
+        int **ab_add = addMatrices(m, a, b, true); // A11 + A12
+        s2 = strassen(m, ab_add, h);
+        freeMatrix(m, ab_add);
+        MPI_Send(&(s2[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == 3)
+    {
+        int **cd_add = addMatrices(m, c, d, true); // A21 + A22
+        s3 = strassen(m, cd_add, e);
+        freeMatrix(m, cd_add);
+        MPI_Send(&(s3[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == 4)
+    {
+        int **ge_sub = addMatrices(m, g, e, false); // B21 - B11
+        s4 = strassen(m, d, ge_sub);
+        freeMatrix(m, ge_sub);
+        MPI_Send(&(s4[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == 5)
+    {
+        int **ad_add = addMatrices(m, a, d, true); // A11 + A22
+        int **eh_add = addMatrices(m, e, h, true); // B11 + B22
+        s5 = strassen(m, ad_add, eh_add);
+        freeMatrix(m, ad_add);
+        freeMatrix(m, eh_add);
+        MPI_Send(&(s5[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == 6)
+    {
+        int **bd_sub = addMatrices(m, b, d, false); // B12 - B22
+        int **gh_add = addMatrices(m, g, h, true);  // B21 + B22
+        s6 = strassen(m, bd_sub, gh_add);
+        freeMatrix(m, bd_sub);
+        freeMatrix(m, gh_add);
+        MPI_Send(&(s6[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    if (rank == 7)
+    {
+        int **ac_sub = addMatrices(m, a, c, false); // A11 - A21
+        int **ef_add = addMatrices(m, e, f, true);  // B11 + B12
+        s7 = strassen(m, ac_sub, ef_add);
+        freeMatrix(m, ac_sub);
+        freeMatrix(m, ef_add);
+        MPI_Send(&(s7[0][0]), m * m, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+
+    freeMatrix(m, a);
+    freeMatrix(m, b);
+    freeMatrix(m, c);
+    freeMatrix(m, d);
+    freeMatrix(m, e);
+    freeMatrix(m, f);
+    freeMatrix(m, g);
+    freeMatrix(m, h);
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    if (rank == 0)
+    {
+        int **s4s5_add = addMatrices(m, s4, s5, true);         // S4 + S5
+        int **s2s6_sub = addMatrices(m, s2, s6, false);        // S2 - S6
+        int **c11 = addMatrices(m, s4s5_add, s2s6_sub, false); // C11 = S4 + S5 - S2 + S6
+        freeMatrix(m, s4s5_add);
+        freeMatrix(m, s2s6_sub);
+
+        int **c12 = addMatrices(m, s1, s2, true); // S1 + S2
+
+        int **c21 = addMatrices(m, s3, s4, true); // S3 + S4
+
+        int **s1s5_add = addMatrices(m, s1, s5, true);         // S1 + S5
+        int **s3s7_add = addMatrices(m, s3, s7, true);         // S3 + S7
+        int **c22 = addMatrices(m, s1s5_add, s3s7_add, false); // C22 = S1 + S5 - S3 - S7
+        freeMatrix(m, s1s5_add);
+        freeMatrix(m, s3s7_add);
+
+        prod = combineMatrices(m, c11, c12, c21, c22);
+
+        freeMatrix(m, c11);
+        freeMatrix(m, c12);
+        freeMatrix(m, c21);
+        freeMatrix(m, c22);
+    }
+
+    freeMatrix(m, s1);
+    freeMatrix(m, s2);
+    freeMatrix(m, s3);
+    freeMatrix(m, s4);
+    freeMatrix(m, s5);
+    freeMatrix(m, s6);
+    freeMatrix(m, s7);
+}
+
+bool check(int n, int **prod1, int **prod2)
+{
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (prod1[i][j] != prod2[i][j])
+                return false;
+        }
+    }
+    return true;
+}
 
 int main(int argc, char *argv[])
 {
+    int p_rank;
+    int num_process;
 
-    CALI_CXX_MARK_FUNCTION;
-    int taskid, numtasks;
-    MPI_Init(&argc, &argv);
+    if (MPI_Init(&argc, &argv) != MPI_SUCCESS)
+    {
+        printf("MPI-INIT Failed\n");
+        return 0;
+    }
 
-    MPI_Comm_rank(MPI_COMM_WORLD, &taskid);
-    MPI_Comm_size(MPI_COMM_WORLD, &numtasks);
+    MPI_Comm_rank(MPI_COMM_WORLD, &p_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_process);
 
     int n;
-    if (argc != 2)
-    {
-        std::cout << "include matrix size" << std::endl;
-        return 1;
-    }
     n = atoi(argv[1]);
-
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(mpi_barrier);
     MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(mpi_barrier);
-    CALI_MARK_END(comm);
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(bcast_n);
-    MPI_Bcast(&n, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
-    CALI_MARK_END(bcast_n);
-    CALI_MARK_END(comm);
-    mat a(n, std::vector<int>(n));
-    mat b(n, std::vector<int>(n));
-    mat c(n, std::vector<int>(n));
+    int **mat1 = allocateMatrix(n);
+    int **mat2 = allocateMatrix(n);
 
-    if (taskid == MASTER)
+    if (p_rank == 0)
     {
-        printf("n: %d, processes: %d\n", n, numtasks);
-        CALI_MARK_BEGIN(data_init);
-        get_random_matrix(a);
-        get_random_matrix(b);
-        CALI_MARK_END(data_init);
-
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < n; j++)
             {
-                printf("%d ", a[i][j]);
+                mat1[i][j] = rand() % 10 + 1;
+                mat2[i][j] = rand() % 10 + 1;
             }
-            printf("\n");
         }
-        printf("\n");
-
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                printf("%d ", b[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
+        // print(n, mat1);
+        // print(n, mat2);
     }
 
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(mpi_barrier);
-    MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(mpi_barrier);
-    CALI_MARK_END(comm);
+    MPI_Bcast(&(mat1[0][0]), n * n, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&(mat2[0][0]), n * n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(comm_large);
-    CALI_MARK_BEGIN(bcast_matricies);
-    MPI_Bcast(&a[0][0], n * n, MPI_INT, MASTER, MPI_COMM_WORLD);
-    MPI_Bcast(&b[0][0], n * n, MPI_INT, MASTER, MPI_COMM_WORLD);
-    CALI_MARK_END(bcast_matricies);
-    CALI_MARK_END(comm_large);
-    CALI_MARK_END(comm);
+    double startTime = MPI_Wtime();
 
-    CALI_MARK_BEGIN(comp);
-    CALI_MARK_BEGIN(comp_large);
-    CALI_MARK_BEGIN(strassen_whole_computation);
-    strassen(n, a, b, c, taskid);
-    CALI_MARK_END(strassen_whole_computation);
-    CALI_MARK_END(comp_large);
-    CALI_MARK_END(comp);
+    int **prod;
+    strassen(n, mat1, mat2, prod, p_rank);
 
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(mpi_barrier);
-    MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(mpi_barrier);
-    CALI_MARK_END(comm);
+    double endTime = MPI_Wtime();
 
-    if (taskid == MASTER)
+    if (p_rank == 0)
     {
-        mat c2(n, std::vector<int>(n));
-        cpu_lin_naive(a, b, c2);
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                printf("%d ", c[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                printf("%d ", c2[i][j]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-        CALI_MARK_BEGIN(correctness);
-        bool correct = verify(c, c2); // TODO: change to cuBlas when implemented
-        CALI_MARK_END(correctness);
-        if (correct)
-        {
-            printf("Verification Successful!\n");
-        }
+        printf("\nParallel Strassen Runtime (MPI): ");
+        printf("%.5f\n\n", endTime - startTime);
+        print(n, prod);
+        int **naive_prod = naive(n, mat1, mat2);
+        if (check(n, prod, naive_prod))
+            cout << "Verification Passed!" << endl;
         else
-        {
-            printf("Verification Failed!\n");
-        }
-        // print_matrix(c);
+            cout << "Error." << endl;
     }
-
-    adiak::init(NULL);
-    adiak::launchdate();                                      // launch date of the job
-    adiak::libraries();                                       // Libraries used
-    adiak::cmdline();                                         // Command line used to launch the job
-    adiak::clustername();                                     // Name of the cluster
-    adiak::value("Algorithm", "Naive Matrix Multiplication"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
-    adiak::value("ProgrammingModel", "MPI");                  // e.g., "MPI", "CUDA", "MPIwithCUDA"
-    adiak::value("Datatype", "int");                          // The datatype of input elements (e.g., double, int, float)
-    adiak::value("SizeOfDatatype", sizeof(int));              // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
-    adiak::value("InputSize", n);                             // The number of elements in input dataset (1000)
-    // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
-    adiak::value("num_procs", numtasks); // The number of processors (MPI ranks)
-    // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
-    // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
-    adiak::value("group_num", 8);                    // The number of your group (integer, e.g., 1, 10)
-    adiak::value("implementation_source", "Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     MPI_Finalize();
 
     return 0;
-}
-
-mat strassen(int n, mat m1, mat m2)
-{
-    // mat m3(n, std::vector<int>(n));
-    // strassen(n, m1, m2, m3, 0);
-    // return m3;
-
-    if (n <= 32)
-    {
-        mat m3(n, std::vector<int>(n));
-        cpu_lin_naive(m1, m2, m3);
-        return m3;
-    }
-
-    int split_size = n / 2;
-
-    mat a = split(n, m1, 0, 0);                   // A11
-    mat b = split(n, m1, 0, split_size);          // A12
-    mat c = split(n, m1, split_size, 0);          // A21
-    mat d = split(n, m1, split_size, split_size); // A22
-
-    mat e = split(n, m2, 0, 0);                   // B11
-    mat f = split(n, m2, 0, split_size);          // B12
-    mat g = split(n, m2, split_size, 0);          // B21
-    mat h = split(n, m2, split_size, split_size); // B22
-
-    mat fh_sub = addsub_matricies(split_size, f, h, false);
-    mat s1 = strassen(split_size, a, fh_sub); // A11 * (B12 - B22)
-
-    mat ab_add = addsub_matricies(split_size, a, b, true);
-    mat s2 = strassen(split_size, ab_add, h); // (A11 + A12) * B22
-
-    mat cd_add = addsub_matricies(split_size, c, d, true);
-    mat s3 = strassen(split_size, cd_add, e); // (A21 + A22) * B11
-
-    mat ge_sub = addsub_matricies(split_size, g, e, false);
-    mat s4 = strassen(split_size, d, ge_sub); // A22 * (B21 - B11)
-
-    mat ad_add = addsub_matricies(split_size, a, d, true);
-    mat eh_add = addsub_matricies(split_size, e, h, true);
-    mat s5 = strassen(split_size, ad_add, eh_add); // (A11 + A22) * (B11 + B22)
-
-    mat bd_sub = addsub_matricies(split_size, b, d, false);
-    mat gh_add = addsub_matricies(split_size, g, h, true);
-    mat s6 = strassen(split_size, bd_sub, gh_add); // (A12 - A22) * (B21 + B22)
-
-    mat ac_sub = addsub_matricies(split_size, a, c, false);
-    mat ef_add = addsub_matricies(split_size, e, f, true);
-    mat s7 = strassen(split_size, ac_sub, ef_add); // (A11 - A21) * (B11 + B12)
-
-    mat s5_s4_add = addsub_matricies(split_size, s5, s4, true);            // S5 + S4
-    mat s5_s4_s2_sub = addsub_matricies(split_size, s5_s4_add, s2, false); // S5 + S4 - S2
-    mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true);        // P1 = S5 + S4 - S2 + S6
-
-    mat c12 = addsub_matricies(split_size, s1, s2, true); // S1 + S2
-
-    mat c21 = addsub_matricies(split_size, s3, s4, true); // S3 + S4
-
-    mat s5_s1_add = addsub_matricies(split_size, s5, s1, true);            // S5 + S1
-    mat s5_s1_s3_sub = addsub_matricies(split_size, s5_s1_add, s3, false); // S5 + S1 - S3
-    mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false);       // P7 = S5 + S1 - S3 - S7
-
-    return combine_matricies(split_size, c11, c12, c21, c22);
-}
-
-void strassen(int n, mat m1, mat m2, mat &m3, int taskid)
-{
-
-    if (n <= 32)
-    {
-        cpu_lin_naive(m1, m2, m3); // TODO: change to cuBlas when implemented
-        return;
-    }
-
-    CALI_MARK_BEGIN(comp);
-    CALI_MARK_BEGIN(comp_small);
-    CALI_MARK_BEGIN(splits);
-    int split_size = n / 2;
-
-    mat a = split(n, m1, 0, 0);                   // A11
-    mat b = split(n, m1, 0, split_size);          // A12
-    mat c = split(n, m1, split_size, 0);          // A21
-    mat d = split(n, m1, split_size, split_size); // A22
-
-    mat e = split(n, m2, 0, 0);                   // B11
-    mat f = split(n, m2, 0, split_size);          // B12
-    mat g = split(n, m2, split_size, 0);          // B21
-    mat h = split(n, m2, split_size, split_size); // B22
-    CALI_MARK_END(splits);
-    CALI_MARK_END(comp_small);
-    CALI_MARK_END(comp);
-
-    mat s1(split_size, std::vector<int>(split_size));
-    mat s2(split_size, std::vector<int>(split_size));
-    mat s3(split_size, std::vector<int>(split_size));
-    mat s4(split_size, std::vector<int>(split_size));
-    mat s5(split_size, std::vector<int>(split_size));
-    mat s6(split_size, std::vector<int>(split_size));
-    mat s7(split_size, std::vector<int>(split_size));
-
-    if (taskid == 0)
-    {
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_large);
-        CALI_MARK_BEGIN(master_receive);
-        MPI_Recv(&(s1[0][0]), split_size * split_size, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s2[0][0]), split_size * split_size, MPI_INT, 2, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s3[0][0]), split_size * split_size, MPI_INT, 3, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s4[0][0]), split_size * split_size, MPI_INT, 4, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s5[0][0]), split_size * split_size, MPI_INT, 5, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s6[0][0]), split_size * split_size, MPI_INT, 6, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&(s7[0][0]), split_size * split_size, MPI_INT, 7, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        CALI_MARK_END(master_receive);
-        CALI_MARK_END(comm_large);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 1)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat fh_sub = addsub_matricies(split_size, f, h, false);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s1 = strassen(split_size, a, fh_sub);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s1[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 2)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat ab_add = addsub_matricies(split_size, a, b, true);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s2 = strassen(split_size, ab_add, h);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s2[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 3)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat cd_add = addsub_matricies(split_size, c, d, true);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s3 = strassen(split_size, cd_add, e);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s3[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 4)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat ge_sub = addsub_matricies(split_size, g, e, false);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s4 = strassen(split_size, d, ge_sub);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s4[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 5)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat ad_add = addsub_matricies(split_size, a, d, true);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat eh_add = addsub_matricies(split_size, e, h, true);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s5 = strassen(split_size, ad_add, eh_add);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s5[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 6)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat bd_sub = addsub_matricies(split_size, b, d, false);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat eg_add = addsub_matricies(split_size, e, g, true);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s6 = strassen(split_size, bd_sub, eg_add);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s6[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-    if (taskid == 7)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat ac_sub = addsub_matricies(split_size, a, c, false);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(addsub);
-        mat eg_add = addsub_matricies(split_size, e, g, true);
-        CALI_MARK_END(addsub);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_small);
-        CALI_MARK_BEGIN(strassens);
-        s7 = strassen(split_size, ac_sub, eg_add);
-        CALI_MARK_END(strassens);
-        CALI_MARK_END(comp_small);
-        CALI_MARK_END(comp);
-
-        CALI_MARK_BEGIN(comm);
-        CALI_MARK_BEGIN(comm_small);
-        CALI_MARK_BEGIN(worker_send);
-        MPI_Send(&(s7[0][0]), split_size * split_size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-        CALI_MARK_END(worker_send);
-        CALI_MARK_END(comm_small);
-        CALI_MARK_END(comm);
-    }
-
-    CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(comm_large);
-    CALI_MARK_BEGIN(mpi_barrier);
-    MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END(mpi_barrier);
-    CALI_MARK_END(comm_large);
-    CALI_MARK_END(comm);
-
-    if (taskid == 0)
-    {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_large);
-        CALI_MARK_BEGIN(combine);
-        mat s5_s4_add = addsub_matricies(split_size, s5, s4, true);            // S5 + S4
-        mat s5_s4_s2_sub = addsub_matricies(split_size, s5_s4_add, s2, false); // S5 + S4 - S2
-        mat c11 = addsub_matricies(split_size, s5_s4_s2_sub, s6, true);        // P1 = S5 + S4 - S2 + S6
-
-        mat c12 = addsub_matricies(split_size, s1, s2, true); // S1 + S2
-
-        mat c21 = addsub_matricies(split_size, s3, s4, true); // S3 + S4
-
-        mat s5_s1_add = addsub_matricies(split_size, s5, s1, true);            // S5 + S1
-        mat s5_s1_s3_sub = addsub_matricies(split_size, s5_s1_add, s3, false); // S5 + S1 - S3
-        mat c22 = addsub_matricies(split_size, s5_s1_s3_sub, s7, false);       // P7 = S5 + S1 - S3 - S7
-
-        m3 = combine_matricies(split_size, c11, c12, c21, c22);
-        CALI_MARK_END(combine);
-        CALI_MARK_END(comp_large);
-        CALI_MARK_END(comp);
-    }
 }
