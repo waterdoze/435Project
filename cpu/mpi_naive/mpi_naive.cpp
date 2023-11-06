@@ -199,21 +199,26 @@ int main(int argc, char *argv[])
                 {
                     correct[i][j] += a[i][k] * b[k][j];
                 }
-            }
-        }
-
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                // printf(" %d", correct[i][j]);
-                if (correct[i][j] != c[i][j])
-                {
+                if(correct[i][j] != c[i][j]) {
                     printf("Error at %d, %d\n", i, j);
+                    printf("Expected: %d, Actual: %d\n", correct[i][j], c[i][j])
                     return 1;
                 }
             }
         }
+
+        // for (int i = 0; i < n; i++)
+        // {
+        //     for (int j = 0; j < n; j++)
+        //     {
+        //         // printf(" %d", correct[i][j]);
+        //         if (correct[i][j] != c[i][j])
+        //         {
+        //             printf("Error at %d, %d\n", i, j);
+        //             return 1;
+        //         }
+        //     }
+        // }
         CALI_MARK_END(correctness);
         printf("Verification Passed!\n");
     }
