@@ -38,7 +38,7 @@ void fillMatrix(int n, int*& mat)
 {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            mat[i * n + j] = rand() % 5;
+            mat[i * n + j] = rand() % 10 + 1;
         }
     }
 }
@@ -47,7 +47,7 @@ void fillMatrix2D(int n, int** &mat)
 {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            mat[i][j] = rand() % 5;
+            mat[i][j] = rand() % 10 + 1;
         }
     }
 }

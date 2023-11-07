@@ -38,6 +38,8 @@ void print_elapsed(clock_t start, clock_t stop)
 
 
 int main(int argc, char *argv[]) {
+    CALI_CXX_MARK_FUNCTION;
+
     /*
     Assuming the vectors are created above
     */
@@ -63,6 +65,9 @@ int main(int argc, char *argv[]) {
     int h_c[MATRIX_SIZE * MATRIX_SIZE];
 
     size_t bytes = MATRIX_SIZE * MATRIX_SIZE * sizeof(int);
+
+    cali::ConfigManager mgr;
+    mgr.start();
 
     CALI_MARK_BEGIN(data_init);
     for (int i = 0; i < MATRIX_SIZE; i++) {
@@ -149,12 +154,12 @@ int main(int argc, char *argv[]) {
     adiak::value("group_num", 8);                     // The number of your group (integer, e.g., 1, 10)
     adiak::value("implementation_source", "Online");
 
+    mgr.stop();
+    mgr.flush();
 
     cudaFree(d_a);
     cudaFree(d_b);
     cudaFree(d_c);
-
-
     
     return 0;
 }
