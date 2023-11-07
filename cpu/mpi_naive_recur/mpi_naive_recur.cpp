@@ -108,6 +108,8 @@ int** naive_recursive_mult(int size, int** A, int** B) {
     return C;
 }
 
+void sendM(int size, int** matrix)
+
 int main(int argc, char *argv[])
 {
     MPI_Init(&argc, &argv);
@@ -129,7 +131,6 @@ int main(int argc, char *argv[])
     int** a; // matrix A
     int** b; // matrix B
     int** c; // result matrix C
-    int individual_matrix_size = n / 2;
 
     if (rank == 0) {
         // initialize matrices
@@ -144,18 +145,44 @@ int main(int argc, char *argv[])
         }
 
         // split into 8 pieces
+        int** a1 = allocateM(n / 2);
+        int** a2 = allocateM(n / 2);
+        int** a3 = allocateM(n / 2);
+        int** a4 = allocateM(n / 2);
+        int** b1 = allocateM(n / 2);
+        int** b2 = allocateM(n / 2);
+        int** b3 = allocateM(n / 2);
+        int** b4 = allocateM(n / 2);
+
+        copyQuadrant(n, a, a1, 1);
+        copyQuadrant(n, a, a2, 2);
+        copyQuadrant(n, a, a3, 3);
+        copyQuadrant(n, a, a4, 4);
+        copyQuadrant(n, b, b1, 1);
+        copyQuadrant(n, b, b2, 2);
+        copyQuadrant(n, b, b3, 3);
+        copyQuadrant(n, b, b4, 4);
 
         // send 7 to children
+        MPI_Send(a2, n * n, MPI_INT, rank?, tag?, MPI_COMM_WORLD);
+        MPI_Send(b3, n * n, MPI_INT, rank?, tag?, MPI_COMM_WORLD);
+
+        // do ur own computation
+        int** c1_part1 = naive_recursive_mult(n / 2, a1, b1);
         
         // wait for children
 
         // combine and finalize
 
+        // free everything
         freeM(n, a);
         freeM(n, b);
         freeM(n, c);
+        batchFreeM(n / 2, new int**[] {a1, a2, a3, a4, b1, b2, b3, b4, c1_part1}, 9);
+
     } else {
-        // receive from parent 
+        // receive from parent
+        MPI_Recv()
 
         // perform recursion
 
