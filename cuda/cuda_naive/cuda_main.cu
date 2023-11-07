@@ -39,14 +39,17 @@ void print_elapsed(clock_t start, clock_t stop)
 
 int main(int argc, char *argv[]) {
     /*
-
     Assuming the vectors are created above
     */
-
     const char* data_init = "data_init";
+    const char* comm = "comm";
+    const char* comp =  "comp";
+    const char* correctness = "correctness";
+
+
     const char* host2device = "host2device";
     const char* device2host = "device2host";
-    const char* naive_time = "naive_time";
+    const char* cuda_naive_time = "cuda_naive_time";
 
     THREADS = atoi(argv[1]);
     MATRIX_SIZE = atoi(argv[2]);
@@ -69,7 +72,6 @@ int main(int argc, char *argv[]) {
             h_c[i * MATRIX_SIZE + j] = 0;
         }
     }
-
     CALI_MARK_END(data_init);
 
     int *d_a, *d_b, *d_c;
@@ -77,24 +79,30 @@ int main(int argc, char *argv[]) {
     cudaMalloc(&d_b, bytes);
     cudaMalloc(&d_c, bytes);
 
+    CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(host2device);
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
     CALI_MARK_END(host2device);
+    CALI_MARK_END(comm);
 
     dim3 threads(THREADS, THREADS);
     dim3 blocks(BLOCKS, BLOCKS);
 
     float start = clock();
-    CALI_MARK_BEGIN(naive_time);
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(cuda_naive_time);
     naive<<<blocks, threads>>>(d_a, d_b, d_c, MATRIX_SIZE);
-    CALI_MARK_END(naive_time);
+    CALI_MARK_END(cuda_naive_time);
+    CALI_MARK_END(comp);
     float stop = clock();
     print_elapsed(start,stop);
 
+    CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(device2host);
     cudaMemcpy(h_c, d_c, bytes, cudaMemcpyDeviceToHost);
     CALI_MARK_END(device2host);
+    CALI_MARK_END(comm);
 
     //When we pass in the thread count it's talking about
     /*
@@ -106,6 +114,22 @@ int main(int argc, char *argv[]) {
     make the array 1d(so change the way we populate)
     when we send the array we only have to send over once and then use the blocking to index the correct ones
     */
+
+    // Verify results
+    CALI_MARK_BEGIN(correctness);
+    for (int i = 0; i < MATRIX_SIZE; i++) {
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            int check = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                check += h_a[i * MATRIX_SIZE + k] * h_b[k * MATRIX_SIZE + j];
+            }
+            if (check != h_c[i * MATRIX_SIZE + j]) {
+                printf("Error: %d != %d\n", check, h_c[i * MATRIX_SIZE + j]);
+                exit(1);
+            }
+        }
+    }
+    CALI_MARK_END(correctness);
 
 
     adiak::init(NULL);
