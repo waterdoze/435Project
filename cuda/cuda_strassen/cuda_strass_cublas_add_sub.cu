@@ -10,12 +10,12 @@
 #define BLOCK_SIZE 16 // Block size set to 16 for simplicity
 #define MAX_DEPTH 20  // Maximum depth of recursion
 
-float *h_A, *h_B, *h_C;
-float *d_A[MAX_DEPTH], *d_B[MAX_DEPTH], *d_C[MAX_DEPTH];
-float *d_M1[MAX_DEPTH], *d_M2[MAX_DEPTH], *d_M3[MAX_DEPTH], *d_M4[MAX_DEPTH], *d_M5[MAX_DEPTH], *d_M6[MAX_DEPTH], *d_M7[MAX_DEPTH];
+float *h_A, *h_B, *h_C; // host data
+float *d_A[MAX_DEPTH], *d_B[MAX_DEPTH], *d_C[MAX_DEPTH]; // device data for A, B, C
+float *d_M1[MAX_DEPTH], *d_M2[MAX_DEPTH], *d_M3[MAX_DEPTH], *d_M4[MAX_DEPTH], *d_M5[MAX_DEPTH], *d_M6[MAX_DEPTH], *d_M7[MAX_DEPTH]; // device data for M1 ~ M7
 
 template <typename T>
-__global__ void classicalMatmul(T *A, T *B, T *C, const int dim)
+__global__ void classicalMatmul(T *A, T *B, T *C, const int dim) // Classical matrix multiplication
 {
     int row = blockIdx.y * blockDim.y + threadIdx.y;
     int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -32,7 +32,7 @@ __global__ void classicalMatmul(T *A, T *B, T *C, const int dim)
 }
 
 template <typename T>
-void strassenMatmul(cublasHandle_t &handle, T *A, T *B, T *C, const int dim, const int d, const int threshold)
+void strassenMatmul(cublasHandle_t &handle, T *A, T *B, T *C, const int dim, const int d, const int threshold) // Strassen matrix multiplication
 {
     const int dim_2 = dim / 2;
 
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
     /* Initialize */
 
     int nDim = atoi(argv[1]);
-    int threshold = 16;
+    int threshold = 16; // threshold for switching to classical matrix multiplication
     dim3 block(BLOCK_SIZE, BLOCK_SIZE);
     dim3 grid((nDim + BLOCK_SIZE - 1) / BLOCK_SIZE, (nDim + BLOCK_SIZE - 1) / BLOCK_SIZE);
 
