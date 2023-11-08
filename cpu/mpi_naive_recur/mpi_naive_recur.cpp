@@ -227,8 +227,6 @@ int main(int argc, char *argv[])
 
         // send back to parent
         MPI_Send(quad_C, n * n / 4, MPI_INT, 0, 0, MPI_COMM_WORLD);
-
-        delete[] quad_C;
     }
 
     MPI_Finalize();
