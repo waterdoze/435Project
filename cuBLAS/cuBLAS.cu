@@ -49,6 +49,8 @@ int main(int argc, char **argv)
     // Copy the result matrix from device to host
     cudaMemcpy(h_C, d_C, n * n * sizeof(float), cudaMemcpyDeviceToHost);
 
+    // cudaDeviceSynchronize(); // Wait for the GPU to finish
+
     // Print the result matrix (C)
     printf("Result matrix (C):\n");
     for (int i = 0; i < n; i++)

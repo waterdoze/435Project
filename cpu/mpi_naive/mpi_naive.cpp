@@ -51,8 +51,7 @@ int main(int argc, char *argv[])
     const char* barrier = "barrier";
     const char* gather = "gather";
 
-    CALI_MARK_BEGIN(comp);
-    CALI_MARK_BEGIN(comp_large);
+
 
     cali::ConfigManager mgr;
     mgr.start();
@@ -95,6 +94,7 @@ int main(int argc, char *argv[])
         // printf("\n");
     }
 
+
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_large);
     CALI_MARK_BEGIN(scatter);
@@ -121,6 +121,8 @@ int main(int argc, char *argv[])
     CALI_MARK_END(comm);
 
     CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(comp_large);
+
     CALI_MARK_BEGIN(comp_small);
     // perform vector multiplication by all processes
     for (i = 0; i < n / size; i++)
