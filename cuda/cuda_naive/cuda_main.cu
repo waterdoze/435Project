@@ -135,6 +135,7 @@ int main(int argc, char *argv[]) {
         }
     }
     CALI_MARK_END(correctness);
+    printf("Verification successful.\n");
 
 
     adiak::init(NULL);

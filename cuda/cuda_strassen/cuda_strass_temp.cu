@@ -186,6 +186,7 @@ int main(int argc, char **argv)
             }
         }
     }
+    printf("Verification successful!\n");
 
     /* Free memory */
 
