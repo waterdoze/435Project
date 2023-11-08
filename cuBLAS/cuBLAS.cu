@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <cmath>
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
@@ -49,17 +50,24 @@ int main(int argc, char **argv)
     // Copy the result matrix from device to host
     cudaMemcpy(h_C, d_C, n * n * sizeof(float), cudaMemcpyDeviceToHost);
 
-    // cudaDeviceSynchronize(); // Wait for the GPU to finish
+    cudaDeviceSynchronize(); // Wait for the GPU to finish
 
-    // Print the result matrix (C)
-    printf("Result matrix (C):\n");
-    for (int i = 0; i < n; i++)
+    // verify the result using naive method
+    for(int i = 0; i < n; i++)
     {
-        for (int j = 0; j < n; j++)
+        for(int j = 0; j < n; j++)
         {
-            printf("%f\t", h_C[i * n + j]);
+            float sum = 0.0f;
+            for(int k = 0; k < n; k++)
+            {
+                sum += h_A[i * n + k] * h_B[k * n + j];
+            }
+            if(fabs(h_C[i * n + j] - sum) > 1e-5)
+            {
+                printf("Error: %f != %f\n", h_C[i * n + j], sum);
+                return 1;
+            }
         }
-        printf("\n");
     }
 
     // Cleanup
