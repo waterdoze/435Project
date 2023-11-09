@@ -4,6 +4,9 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+#include <adiak.hpp>
 
 int main(int argc, char **argv)
 {
@@ -14,7 +17,7 @@ int main(int argc, char **argv)
     }
 
     // Matrix dimension
-    int n = atoi(argv[1);
+    int n = atoi(argv[1]);
 
     // Allocate memory for matrices on the host
     float *h_A = (float *)malloc(n * n * sizeof(float));

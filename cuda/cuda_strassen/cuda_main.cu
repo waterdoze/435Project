@@ -4,7 +4,16 @@
 #include <sys/time.h>
 #include <bits/stdc++.h>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+#include <adiak.hpp>
+
 using namespace std;
+
+int THREADS;
+int BLOCKS;
+int NUM_VALS;
+int MATRIX_SIZE;
 
 void print(int n, int** mat)
 {
@@ -136,13 +145,16 @@ int** naive(int n, int** mat1, int** mat2)
     return prod;
 }
 
-__global__ void multiply(int* mat1, int* mat2, int* product, int n)
+__global__ void multiply(int* a, int* b, int* c, int n)
 {
-    int prod = blockIdx.x * blockDim.x + threadIdx.x;
-    int i = prod / n;
-    int j = prod % n;
-    for (int k = 0; k < n; k++) {
-        product[i * n + j] += mat1[i * n + k] * mat2[k * n + j];
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+
+    // Iterate over row, and down column
+    c[row * N + col] = 0;
+    for (int k = 0; k < N; k++) {
+            // Accumulate results for a single element
+        c[row * N + col] += a[row * N + k] * b[k * N + col];
     }
 }
 
@@ -173,23 +185,35 @@ int** cudaNaive(int n, int** mat1, int** mat2)
 
     int *d_mat1, *d_mat2, *d_product;
 
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(host2device);
     cudaMalloc(&d_mat1, bytes);
     cudaMalloc(&d_mat2, bytes);
     cudaMalloc(&d_product, bytes);
-
+    
     cudaMemcpy(d_mat1, h_mat1, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_mat2, h_mat2, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_product, h_product, bytes, cudaMemcpyHostToDevice);
+    CALI_MARK_END(host2device);
+    CALI_MARK_END(comm);
 
-    int threads = min(1024, n);
-    int blocks = (n * n) / threads;
-    dim3 gridSize(blocks, 1, 1);
-    dim3 blockSize(threads, 1, 1);
+    int threads = THREADS;
+    int blocks = (MATRIX_SIZE + THREADS - 1) / THREADS;
+    dim3 gridSize(blocks, blocks, 1);
+    dim3 blockSize(threads, threads, 1);
 
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(naive_multi);
     multiply<<<gridSize, blockSize>>>(d_mat1, d_mat2, d_product, n);
     cudaDeviceSynchronize();
+    CALI_MARK_END(naive_multi);
+    CALI_MARK_END(comp);
 
+    CALI_MARK_BEGIN(comm);
+    CALI_MARK_BEGIN(device2host);
     cudaMemcpy(h_product, d_product, bytes, cudaMemcpyDeviceToHost);
+    CALI_MARK_END(device2host);
+    CALI_MARK_END(comm);
 
     cudaFree(d_mat1);
     cudaFree(d_mat2);
@@ -210,14 +234,15 @@ int** cudaNaive(int n, int** mat1, int** mat2)
 
 int** strassen(int n, int** mat1, int** mat2)
 {
-
+    
     if (n <= 32)
     {
         return naive(n, mat1, mat2);
     }
 
     int m = n / 2;
-
+    CALI_MARK_BEGIN(comp);
+    CALI_MARK_BEGIN(slicing);
     int** a = getSlice(n, mat1, 0, 0);
     int** b = getSlice(n, mat1, 0, m);
     int** c = getSlice(n, mat1, m, 0);
@@ -226,12 +251,16 @@ int** strassen(int n, int** mat1, int** mat2)
     int** f = getSlice(n, mat2, 0, m);
     int** g = getSlice(n, mat2, m, 0);
     int** h = getSlice(n, mat2, m, m);
+    CALI_MARK_END(slicing);
 
+
+    CALI_MARK_BEGIN(adding);
     int** bds = addMatrices(m, b, d, false);
     int** gha = addMatrices(m, g, h, true);
     int** s1 = cudaNaive(m, bds, gha);
     freeMatrix2D(m, bds);
     freeMatrix2D(m, gha);
+    
 
     int** ada = addMatrices(m, a, d, true);
     int** eha = addMatrices(m, e, h, true);
@@ -291,32 +320,64 @@ int** strassen(int n, int** mat1, int** mat2)
     freeMatrix2D(m, s3);
     freeMatrix2D(m, s5);
     freeMatrix2D(m, s7);
+    CALI_MARK_END(adding);
 
+    CALI_MARK_BEGIN(merging);
     int** prod = combineMatrices(m, c11, c12, c21, c22);
+    CALI_MARK_END(merging);
 
     freeMatrix2D(m, c11);
     freeMatrix2D(m, c12);
     freeMatrix2D(m, c21);
     freeMatrix2D(m, c22);
-
+    
+    CALI_MARK_BEGIN(comp);
     return prod;
 }
 
-int main()
-{
-    int n;
-    n = 2;
+const char* data_init = "data_init";
+const char* comm = "comm";
+const char* comp =  "comp";
+const char* correctness = "correctness";
+const char* strassen_time = "strassen_time";
+const char* naive_multi = "naive_multi";
 
+const char* slicing = "slicing";
+
+const char* slicing = "merging";
+
+
+const char* comm_little = "comm_little";
+const char* comp_little = "comp_little"
+
+const char* host2device = "host2device";
+const char* device2host = "device2host";
+const char* cuda_naive_time = "cuda_naive_time";
+
+int main(int argc, char *argv[])
+{
+    
+    cali::ConfigManager mgr;
+    mgr.start();
+
+    int n;
+    n = atoi(argv[2]);
+    THREADS = atoi(argv[1]);
+    
+    CALI_MARK_BEGIN(data_init)
     int** mat1 = allocateMatrix2D(n);
     fillMatrix2D(n, mat1);
 
     int** mat2 = allocateMatrix2D(n);
     fillMatrix2D(n, mat2);
+    CALI_MARK_END(data_init)
 
     clock_t start, end;
     start = clock();
 
+    CALI_MARK_BEGIN(strassen_time)
     int** prod = strassen(n, mat1, mat2);
+    CALI_MARK_END(strassen_time)
 
     end = clock();
     double time = double(end - start) / double(CLOCKS_PER_SEC);
