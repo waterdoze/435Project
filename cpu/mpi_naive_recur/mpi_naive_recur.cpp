@@ -97,8 +97,19 @@ int* naive_recursive_mult(int N, int* A, int* B) {
     return C;
 }
 
+const char* init_matrix = "init_matrix"; // allocate and init random vars
+const char* init_quadrants = "init_quadrants"; // split into 8 matrices
+const char* master_send_quadrants = "master_send_quadrants"; // rank0 sends problems
+const char* master_recv_quadrants = "master_recv_quadrants"; // rank0 gets back results
+const char* child_recv_quadrants = "child_recv_quadrants"; // rank1-7 gets problems
+const char* child_send_quadrants = "child_send_quadrants"; // rank1-7 sends back results
+const char* compute_quadrants = "compute_quadrants"; // ALL ranks run naive_recursive_mult
+const char* add_quadrant_pairs = "add_quadrant_pairs"; // rank0 adds C pairs
+const char* combine_quadrants = "combine_quadrants"; // rank0 combines the 4 pairs into C
+
 int main(int argc, char *argv[])
 {
+    CALI_CXX_MARK_FUNCTION;
     MPI_Init(&argc, &argv);
 
     int processors;
@@ -121,6 +132,7 @@ int main(int argc, char *argv[])
 
     if (rank == 0) {
         // initialize matrices
+        CALI_MARK_BEGIN(init_matrix);
         A = new int[n * n];
         B = new int[n * n];
         C = new int[n * n];
@@ -130,8 +142,10 @@ int main(int argc, char *argv[])
                 B[i][j] = rand() % 10 + 1;
             }
         }
+        CALI_MARK_END(init_matrix);
 
         // split into 8 pieces
+        CALI_MARK_BEGIN(init_quadrants);
         int** A1 = new int[n * n / 4];
         int** A2 = new int[n * n / 4];
         int** A3 = new int[n * n / 4];
@@ -149,8 +163,10 @@ int main(int argc, char *argv[])
         copyQuadrant(n, B, B2, 2);
         copyQuadrant(n, B, B3, 3);
         copyQuadrant(n, B, B4, 4);
+        CALI_MARK_END(init_quadrants);
 
         // send 7 (A & B) to children
+        CALI_MARK_BEGIN(master_send_quadrants);
         MPI_Send(A2, n * n / 4, MPI_INT, 1, 0, MPI_COMM_WORLD);
         MPI_Send(B3, n * n / 4, MPI_INT, 1, 0, MPI_COMM_WORLD);
 
@@ -171,12 +187,15 @@ int main(int argc, char *argv[])
 
         MPI_Send(A4, n * n / 4, MPI_INT, 7, 0, MPI_COMM_WORLD);
         MPI_Send(B4, n * n / 4, MPI_INT, 7, 0, MPI_COMM_WORLD);
-
+        CALI_MARK_END(master_send_quadrants);
 
         // do ur own computation
+        CALI_MARK_BEGIN(compute_quadrants);
         int* C1_part1 = naive_recursive_mult(n / 2, A1, B1);
+        CALI_MARK_END(compute_quadrants);
         
         // wait for C parts from all 7 children
+        CALI_MARK_BEGIN(master_recv_quadrants);
         int* C1_part2;
         int* C2_part1;
         int* C2_part2;
@@ -191,13 +210,17 @@ int main(int argc, char *argv[])
         MPI_Recv(C3_part2, n * n / 4, MPI_INT, 5, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(C4_part1, n * n / 4, MPI_INT, 6, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Recv(C4_part2, n * n / 4, MPI_INT, 7, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        CALI_MARK_END(master_recv_quadrants);
 
         // add pairs and combine!
+        CALI_MARK_BEGIN(add_quadrant_pairs);
         addM(n / 2, C1_part1, C1_part2);
         addM(n / 2, C2_part1, C2_part2);
         addM(n / 2, C3_part1, C3_part2);
         addM(n / 2, C4_part1, C4_part2);
+        CALI_MARK_END(add_quadrant_pairs);
 
+        CALI_MARK_BEGIN(combine_quadrants);
         for (int i = 0; i < n / 2; ++i)
             for (int j = 0; j < n / 2; ++j) {
                 C[IDX(i, j, N)] = C1_part1[IDX(i, j, n / 2)];
@@ -205,6 +228,7 @@ int main(int argc, char *argv[])
                 C[IDX(i + n / 2, j, N)] = C3_part1[IDX(i, j, n / 2)];
                 C[IDX(i + n / 2, j + n / 2, N)] = C4_part1[IDX(i, j, n / 2)];
             }
+        CALI_MARK_END(combine_quadrants);
 
         // ! Cleanup
         // Warning, there's (3 Matrices) + (16 Quadrants) = 7 * N*N allocated data
@@ -219,14 +243,20 @@ int main(int argc, char *argv[])
         MPI_Status status;
 
         // receive from parent
+        CALI_MARK_BEGIN(child_recv_quadrants);
         MPI_Recv(quad_A, n * n / 4, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
         MPI_Recv(quad_B, n * n / 4, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
+        CALI_MARK_END(child_recv_quadrants);
 
         // perform recursion
+        CALI_MARK_BEGIN(compute_quadrants);
         quad_C = naive_recursive_mult(n / 2, quad_A, quad_B);
+        CALI_MARK_END(compute_quadrants);
 
         // send back to parent
+        CALI_MARK_BEGIN(child_send_quadrants);
         MPI_Send(quad_C, n * n / 4, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        CALI_MARK_END(child_send_quadrants);
     }
 
     MPI_Finalize();
