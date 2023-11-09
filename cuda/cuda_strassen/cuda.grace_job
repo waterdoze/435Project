@@ -29,4 +29,4 @@ module load GCCcore/7.3.0
 
 CALI_CONFIG="spot(output=t${num_threads}-v${num_vals}.cali), \
     cuda.gputime" \
-./cuda $num_threads $num_vals
+./cuda_main $num_threads $num_vals

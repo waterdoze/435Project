@@ -4,6 +4,9 @@
 #include <cuda_runtime.h>
 #include <cublas_v2.h>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+#include <adiak.hpp>
 
 int main(int argc, char **argv)
 {
