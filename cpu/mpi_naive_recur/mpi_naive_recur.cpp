@@ -33,7 +33,7 @@ int* naive_recursive_mult(int N, int* A, int* B) {
     int quadN = N / 2;
 
     // allocate C
-    int** C = allocateM(N);
+    int* C = new int[N * N];
 
     // base case
     if (N == 1) {
