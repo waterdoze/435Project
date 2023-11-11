@@ -29,6 +29,8 @@ void addM(int n, int* a, int* b) {
         a[i] += b[i];
 }
 
+// CONSUMES NOTHING
+// PRODUCES C
 int* naive_recursive_mult(int N, int* A, int* B) {
     int quadN = N / 2;
 
@@ -86,8 +88,6 @@ int* naive_recursive_mult(int N, int* A, int* B) {
         }
 
     // free allocated A & B quads & returned C parts
-    // ! Could fail idk, just check if compilation error happens
-    // TODO: if fails, just do delete[] A1; delete[] A2; ... delete[] C4_part2;
     batchFreeM(new int*[] {
         A1, A2, A3, A4, B1, B2, B3, B4, 
         C1_part1, C1_part2, C2_part1, C2_part2, C3_part1, C3_part2, C4_part1, C4_part2
@@ -257,6 +257,8 @@ int main(int argc, char *argv[])
         CALI_MARK_BEGIN(child_send_quadrants);
         MPI_Send(quad_C, n * n / 4, MPI_INT, 0, 0, MPI_COMM_WORLD);
         CALI_MARK_END(child_send_quadrants);
+
+        batchFreeM(new int*[] {quad_A, quad_B, quad_C}, 3);
     }
 
     MPI_Finalize();
