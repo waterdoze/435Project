@@ -10,7 +10,7 @@ void cpu_lin_naive(mat &A, mat &B, mat &C) {
 	size_t C_column = C[0].size();
 	
 	
-
+    
 	for (size_t i = 0; i < A_row; ++i) {
 		for (size_t j = 0; j < B_column; ++j) {
 			float tmp = 0.0;
