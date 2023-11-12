@@ -1,0 +1,8 @@
+Matrix Size: 1024
+Number of Processes: 8
+
+Parallel Strassen Runtime (MPI): 0.509417
+
+Verification Passed!
+JOBID        NAME                 USER                     PARTITION              NODES  CPUS  STATE        TIME         TIME_LEFT    START_TIME         REASON                   NODELIST
+9204402      JobName              kdai                     short                  16     64    RUNNING      0:12         1:59:48      2023-11-12T00:30:4 None                     c[241-244,246,249-253,282,285-289]

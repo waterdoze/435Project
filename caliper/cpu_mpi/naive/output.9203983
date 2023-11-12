@@ -1,0 +1,7 @@
+Matrix Size: 4096
+Number of Processes: 8
+Start: 248985.458570; End: 249148.820009
+MPI Naive Time: 163.361439
+Verification Passed!
+JOBID        NAME                 USER                     PARTITION              NODES  CPUS  STATE        TIME         TIME_LEFT    START_TIME         REASON                   NODELIST
+9203983      JobName              kdai                     short                  16     64    RUNNING      26:17        1:33:43      2023-11-11T22:48:2 None                     c[741-742,744-750,753,755-756,761-764]
