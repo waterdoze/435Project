@@ -7,6 +7,26 @@
 
 using namespace std;
 
+const char *data_init = "data_init";
+const char *comm = "comm";
+const char *comm_small = "comm_small";
+const char *comm_large = "comm_large";
+const char *comp = "comp";
+const char *comp_small = "comp_small";
+const char *comp_large = "comp_large";
+const char *correctness = "correctness";
+
+const char *strassen_whole_computation = "strassen_whole_computation";
+const char *bcast_n = "bcast_n";
+const char *bcast_matricies = "bcast_matricies";
+const char *splits = "splits";
+const char *addsub = "addsub";
+const char *combine = "combine";
+const char *strassens = "strassens";
+const char *worker_send = "worker_send";
+const char *master_receive = "master_receive";
+const char *mpi_barrier = "mpi_barrier";
+
 void print(int n, int **mat)
 {
     for (int i = 0; i < n; i++)
@@ -133,21 +153,21 @@ int **strassen(int n, int **mat1, int **mat2)
     int **s1 = strassen(m, a, fh_sub);          // S1 = A11 * (B12 - B22)
     freeMatrix(m, fh_sub);
 
-    int **ab_add = addMatrices(m, a, b, true);  // A11 + A12
-    int **s2 = strassen(m, ab_add, h);          // S2 = (A11 + A12) * B22
+    int **ab_add = addMatrices(m, a, b, true); // A11 + A12
+    int **s2 = strassen(m, ab_add, h);         // S2 = (A11 + A12) * B22
     freeMatrix(m, ab_add);
 
-    int **cd_add = addMatrices(m, c, d, true);  // A21 + A22
-    int **s3 = strassen(m, cd_add, e);          // S3 = (A21 + A22) * B11
+    int **cd_add = addMatrices(m, c, d, true); // A21 + A22
+    int **s3 = strassen(m, cd_add, e);         // S3 = (A21 + A22) * B11
     freeMatrix(m, cd_add);
 
     int **ge_sub = addMatrices(m, g, e, false); // B21 - B11
     int **s4 = strassen(m, d, ge_sub);          // S4 = A22 * (B21 - B11)
     freeMatrix(m, ge_sub);
 
-    int **ad_add = addMatrices(m, a, d, true);  // A11 + A22
-    int **eh_add = addMatrices(m, e, h, true);  // B11 + B22
-    int **s5 = strassen(m, ad_add, eh_add);     // S5 = (A11 + A22) * (B11 + B22)
+    int **ad_add = addMatrices(m, a, d, true); // A11 + A22
+    int **eh_add = addMatrices(m, e, h, true); // B11 + B22
+    int **s5 = strassen(m, ad_add, eh_add);    // S5 = (A11 + A22) * (B11 + B22)
     freeMatrix(m, ad_add);
     freeMatrix(m, eh_add);
 
@@ -269,7 +289,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(strassens);
-        s1 = strassen(m, a, fh_sub);                // S1 = A11 * (B12 - B22)
+        s1 = strassen(m, a, fh_sub); // S1 = A11 * (B12 - B22)
         CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -290,7 +310,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
-        int **ab_add = addMatrices(m, a, b, true);  // A11 + A12
+        int **ab_add = addMatrices(m, a, b, true); // A11 + A12
         CALI_MARK_END(addsub);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -298,7 +318,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(strassens);
-        s2 = strassen(m, ab_add, h);                // S2 = (A11 + A12) * B22
+        s2 = strassen(m, ab_add, h); // S2 = (A11 + A12) * B22
         CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -319,7 +339,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
-        int **cd_add = addMatrices(m, c, d, true);  // A21 + A22
+        int **cd_add = addMatrices(m, c, d, true); // A21 + A22
         CALI_MARK_END(addsub);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -327,7 +347,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(strassens);
-        s3 = strassen(m, cd_add, e);                // S3 = (A21 + A22) * B11
+        s3 = strassen(m, cd_add, e); // S3 = (A21 + A22) * B11
         CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -356,7 +376,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(strassens);
-        s4 = strassen(m, d, ge_sub);                // S4 = A22 * (B21 - B11)
+        s4 = strassen(m, d, ge_sub); // S4 = A22 * (B21 - B11)
         CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -393,7 +413,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(strassens);
-        s5 = strassen(m, ad_add, eh_add);           // S5 = (A11 + A22) * (B11 + B22)
+        s5 = strassen(m, ad_add, eh_add); // S5 = (A11 + A22) * (B11 + B22)
         CALI_MARK_END(strassens);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -423,7 +443,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
-        int **gh_add = addMatrices(m, g, h, true);  // B21 + B22
+        int **gh_add = addMatrices(m, g, h, true); // B21 + B22
         CALI_MARK_END(addsub);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -461,7 +481,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         CALI_MARK_BEGIN(comp);
         CALI_MARK_BEGIN(comp_small);
         CALI_MARK_BEGIN(addsub);
-        int **ef_add = addMatrices(m, e, f, true);  // B11 + B12
+        int **ef_add = addMatrices(m, e, f, true); // B11 + B12
         CALI_MARK_END(addsub);
         CALI_MARK_END(comp_small);
         CALI_MARK_END(comp);
@@ -503,9 +523,6 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
 
     if (rank == 0)
     {
-        CALI_MARK_BEGIN(comp);
-        CALI_MARK_BEGIN(comp_large);
-        CALI_MARK_BEGIN(combine);
         int **s4s5_add = addMatrices(m, s4, s5, true);         // S4 + S5
         int **s2s6_sub = addMatrices(m, s2, s6, false);        // S2 - S6
         int **c11 = addMatrices(m, s4s5_add, s2s6_sub, false); // C11 = S4 + S5 - S2 + S6
@@ -522,6 +539,9 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
         freeMatrix(m, s1s5_add);
         freeMatrix(m, s3s7_add);
 
+        CALI_MARK_BEGIN(comp);
+        CALI_MARK_BEGIN(comp_large);
+        CALI_MARK_BEGIN(combine);
         prod = combineMatrices(m, c11, c12, c21, c22);
         CALI_MARK_END(combine);
         CALI_MARK_END(comp_large);
@@ -542,27 +562,7 @@ void strassen(int n, int **mat1, int **mat2, int **&prod, int rank)
     freeMatrix(m, s7);
 }
 
-const char *data_init = "data_init";
-const char *comm = "comm";
-const char *comm_small = "comm_small";
-const char *comm_large = "comm_large";
-const char *comp = "comp";
-const char *comp_small = "comp_small";
-const char *comp_large = "comp_large";
-const char *correctness = "correctness";
-
-const char *strassen_whole_computation = "strassen_whole_computation";
-const char *bcast_n = "bcast_n";
-const char *bcast_matricies = "bcast_matricies";
-const char *splits = "splits";
-const char *addsub = "addsub";
-const char *combine = "combine";
-const char *strassens = "strassens";
-const char *worker_send = "worker_send";
-const char *master_receive = "master_receive";
-const char *mpi_barrier = "mpi_barrier";
-
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
 
     CALI_CXX_MARK_FUNCTION;
@@ -576,13 +576,17 @@ int main(int argc, char* argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
     int n;
-    if(argc == 2) {
+    if (argc == 2)
+    {
         n = atoi(argv[1]);
     }
-    else {
+    else
+    {
         printf("Please provide a matrix size\n");
         return 1;
     }
+    cali::ConfigManager mgr;
+    mgr.start();
 
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(mpi_barrier);
@@ -595,7 +599,6 @@ int main(int argc, char* argv[])
     MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
     CALI_MARK_END(bcast_n);
     CALI_MARK_END(comm);
-
 
     int **mat1 = allocateMatrix(n);
     int **mat2 = allocateMatrix(n);
@@ -620,70 +623,66 @@ int main(int argc, char* argv[])
     }
 
     CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(comp_large);
+    CALI_MARK_BEGIN(comm_large);
     CALI_MARK_BEGIN(bcast_matricies);
     MPI_Bcast(&(mat1[0][0]), n * n, MPI_INT, 0, MPI_COMM_WORLD);
     MPI_Bcast(&(mat2[0][0]), n * n, MPI_INT, 0, MPI_COMM_WORLD);
     CALI_MARK_END(bcast_matricies);
-    CALI_MARK_END(comp_large);
+    CALI_MARK_END(comm_large);
     CALI_MARK_END(comm);
 
-    CALI_MARK_BEGIN(comp);
-    CALI_MARK_BEGIN(comp_large);
-    CALI_MARK_BEGIN(strassen_whole_computation);
     double startTime = MPI_Wtime();
 
     int **prod;
     strassen(n, mat1, mat2, prod, rank);
 
     double endTime = MPI_Wtime();
-    CALI_MARK_END(strassen_whole_computation);
-    CALI_MARK_END(comp_large);
-    CALI_MARK_END(comp);
 
     if (rank == 0)
     {
         printf("\nParallel Strassen Runtime (MPI): ");
-        printf("%.5f\n\n", endTime - startTime);
+        printf("%f\n\n", endTime - startTime);
         // print(n, prod);
         CALI_MARK_BEGIN(correctness);
-        int** correct = allocateMatrix(n);
-        for(int i = 0; i < n; i++) {
-            for(int j = 0; j < n; j++) {
-                correct[i][j] = 0;
-                for(int k = 0; k < n; k++) {
-                    correct[i][j] += mat1[i][k] * mat2[k][j];
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                int temp = 0;
+                for (int k = 0; k < n; k++)
+                {
+                    temp += mat1[i][k] * mat2[k][j];
                 }
-                if(correct[i][j] != prod[i][j]) {
+                if (temp != prod[i][j])
+                {
                     printf("Error at %d, %d\n", i, j);
-                    printf("Expected: %d, Actual: %d\n", correct[i][j], prod[i][j]);
+                    printf("Expected: %d, Actual: %d\n", temp, prod[i][j]);
                     return 1;
                 }
             }
         }
         CALI_MARK_END(correctness);
         printf("Verification Passed!\n");
-        freeMatrix(n, correct);
-
     }
 
     adiak::init(NULL);
-    adiak::launchdate();                                          // launch date of the job
-    adiak::libraries();                                           // Libraries used
-    adiak::cmdline();                                             // Command line used to launch the job
-    adiak::clustername();                                         // Name of the cluster
+    adiak::launchdate();                                               // launch date of the job
+    adiak::libraries();                                                // Libraries used
+    adiak::cmdline();                                                  // Command line used to launch the job
+    adiak::clustername();                                              // Name of the cluster
     adiak::value("Algorithm", "MPI Strassen's Matrix Multiplication"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
-    adiak::value("ProgrammingModel", "MPI");                      // e.g., "MPI", "CUDA", "MPIwithCUDA"
-    adiak::value("Datatype", "int");                              // The datatype of input elements (e.g., double, int, float)
-    adiak::value("SizeOfDatatype", sizeof(int));                  // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
-    adiak::value("InputSize", n);                                 // The number of elements in input dataset (1000)
+    adiak::value("ProgrammingModel", "MPI");                           // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int");                                   // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int));                       // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", n);                                      // The number of elements in input dataset (1000)
     // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
     adiak::value("num_procs", size); // The number of processors (MPI ranks)
     // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
     // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
     adiak::value("group_num", 8);                    // The number of your group (integer, e.g., 1, 10)
     adiak::value("implementation_source", "Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
-
+    mgr.stop();
+    mgr.flush();
     MPI_Finalize();
 
     return 0;

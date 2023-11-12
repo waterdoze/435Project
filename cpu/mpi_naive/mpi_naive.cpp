@@ -16,10 +16,12 @@ int main(int argc, char *argv[])
 
     int i, j, k, rank, size, sum = 0;
     int n; // Matrix size
-    if(argc == 2) {
+    if (argc == 2)
+    {
         n = atoi(argv[1]);
     }
-    else {
+    else
+    {
         printf("Please provide a matrix size\n");
         return 1;
     }
@@ -37,21 +39,19 @@ int main(int argc, char *argv[])
     int block = n * n / size; // number of elements in each block
 
     /* Define Caliper region names */
-    const char* data_init = "data_init";
-    const char* comm = "comm";
-    const char* comm_small = "comm_small";
-    const char* comm_large = "comm_large";
-    const char* comp = "comp";
-    const char* comp_small = "comp_small";
-    const char* comp_large = "comp_large";
-    const char* correctness = "correctness";
+    const char *data_init = "data_init";
+    const char *comm = "comm";
+    const char *comm_small = "comm_small";
+    const char *comm_large = "comm_large";
+    const char *comp = "comp";
+    const char *comp_small = "comp_small";
+    const char *comp_large = "comp_large";
+    const char *correctness = "correctness";
 
-    const char* scatter = "scatter";
-    const char* bcast = "bcast";
-    const char* barrier = "barrier";
-    const char* gather = "gather";
-
-
+    const char *scatter = "scatter";
+    const char *bcast = "bcast";
+    const char *barrier = "barrier";
+    const char *gather = "gather";
 
     cali::ConfigManager mgr;
     mgr.start();
@@ -94,7 +94,6 @@ int main(int argc, char *argv[])
         // printf("\n");
     }
 
-
     CALI_MARK_BEGIN(comm);
     CALI_MARK_BEGIN(comm_large);
     CALI_MARK_BEGIN(scatter);
@@ -120,10 +119,12 @@ int main(int argc, char *argv[])
     CALI_MARK_END(barrier);
     CALI_MARK_END(comm);
 
+    double start, end;
+    start = MPI_Wtime();
+
     CALI_MARK_BEGIN(comp);
     CALI_MARK_BEGIN(comp_large);
 
-    CALI_MARK_BEGIN(comp_small);
     // perform vector multiplication by all processes
     for (i = 0; i < n / size; i++)
     {
@@ -137,7 +138,8 @@ int main(int argc, char *argv[])
             sum = 0;
         }
     }
-    CALI_MARK_END(comp_small);
+
+    CALI_MARK_END(comp_large);
     CALI_MARK_END(comp);
 
     CALI_MARK_BEGIN(comm);
@@ -155,29 +157,29 @@ int main(int argc, char *argv[])
     CALI_MARK_END(barrier);
     CALI_MARK_END(comm);
 
-    CALI_MARK_END(comp_large);
-    CALI_MARK_END(comp);
-
+    end = MPI_Wtime();
 
     adiak::init(NULL);
-    adiak::launchdate();                                         // launch date of the job
-    adiak::libraries();                                          // Libraries used
-    adiak::cmdline();                                            // Command line used to launch the job
-    adiak::clustername();                                        // Name of the cluster
-    adiak::value("Algorithm", "MPI Naive Matrix Multiplication");// The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
-    adiak::value("ProgrammingModel", "MPI");          // e.g., "MPI", "CUDA", "MPIwithCUDA"
-    adiak::value("Datatype", "int");                          // The datatype of input elements (e.g., double, int, float)
-    adiak::value("SizeOfDatatype", sizeof(int));              // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
-    adiak::value("InputSize", n);                        // The number of elements in input dataset (1000)
+    adiak::launchdate();                                          // launch date of the job
+    adiak::libraries();                                           // Libraries used
+    adiak::cmdline();                                             // Command line used to launch the job
+    adiak::clustername();                                         // Name of the cluster
+    adiak::value("Algorithm", "MPI Naive Matrix Multiplication"); // The name of the algorithm you are using (e.g., "MergeSort", "BitonicSort")
+    adiak::value("ProgrammingModel", "MPI");                      // e.g., "MPI", "CUDA", "MPIwithCUDA"
+    adiak::value("Datatype", "int");                              // The datatype of input elements (e.g., double, int, float)
+    adiak::value("SizeOfDatatype", sizeof(int));                  // sizeof(datatype) of input elements in bytes (e.g., 1, 2, 4)
+    adiak::value("InputSize", n);                                 // The number of elements in input dataset (1000)
     // adiak::value("InputType", inputType);                        // For sorting, this would be "Sorted", "ReverseSorted", "Random", "1%perturbed"
-    adiak::value("num_procs", size);                        // The number of processors (MPI ranks)
+    adiak::value("num_procs", size); // The number of processors (MPI ranks)
     // adiak::value("num_threads", num_threads);                    // The number of CUDA or OpenMP threads
     // adiak::value("num_blocks", num_blocks);                      // The number of CUDA blocks
-    adiak::value("group_num", 8);                     // The number of your group (integer, e.g., 1, 10)
+    adiak::value("group_num", 8);                    // The number of your group (integer, e.g., 1, 10)
     adiak::value("implementation_source", "Online"); // Where you got the source code of your algorithm; choices: ("Online", "AI", "Handwritten").
 
     if (rank == 0)
     {
+        printf("Start: %f; End: %f\n", start, end);
+        printf("MPI Naive Time: %f\n", end - start);
         // Print out the result matrix
         // for (i = 0; i < n; i++)
         // {
@@ -191,36 +193,23 @@ int main(int argc, char *argv[])
 
         CALI_MARK_BEGIN(correctness);
         // check if result is correct
-        int correct[n][n];
         for (int i = 0; i < n; i++)
         {
             for (int j = 0; j < n; j++)
             {
-                correct[i][j] = 0;
+                int temp = 0;
                 for (int k = 0; k < n; k++)
                 {
-                    correct[i][j] += a[i][k] * b[k][j];
+                    temp += a[i][k] * b[k][j];
                 }
-                if(correct[i][j] != c[i][j]) {
+                if (temp != c[i][j])
+                {
                     printf("Error at %d, %d\n", i, j);
-                    printf("Expected: %d, Actual: %d\n", correct[i][j], c[i][j])
+                    printf("Expected: %d, Actual: %d\n", temp, c[i][j]);
                     return 1;
                 }
             }
         }
-
-        // for (int i = 0; i < n; i++)
-        // {
-        //     for (int j = 0; j < n; j++)
-        //     {
-        //         // printf(" %d", correct[i][j]);
-        //         if (correct[i][j] != c[i][j])
-        //         {
-        //             printf("Error at %d, %d\n", i, j);
-        //             return 1;
-        //         }
-        //     }
-        // }
         CALI_MARK_END(correctness);
         printf("Verification Passed!\n");
     }
