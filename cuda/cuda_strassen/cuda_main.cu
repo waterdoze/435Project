@@ -24,7 +24,7 @@ const char *multi = "multi";
 
 const char *slicing = "slicing";
 const char *addsub = "addsub";
-const char *merging = "merging";
+const char *combine = "combine";
 
 const char *comm_small = "comm_small";
 const char *comp_small = "comp_small";
@@ -493,11 +493,11 @@ int **strassen(int n, int **mat1, int **mat2)
     freeMatrix2D(m, s7);
 
     CALI_MARK_BEGIN(comp);
-    CALI_MARK_BEGIN(comp_small);
-    CALI_MARK_BEGIN(merging);
+    CALI_MARK_BEGIN(comp_large);
+    CALI_MARK_BEGIN(combine);
     int **prod = combineMatrices(m, c11, c12, c21, c22);
-    CALI_MARK_END(merging);
-    CALI_MARK_END(comp_small);
+    CALI_MARK_END(combine);
+    CALI_MARK_END(comp_large);
     CALI_MARK_END(comp);
 
     freeMatrix2D(m, c11);
