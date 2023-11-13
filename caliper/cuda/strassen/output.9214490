@@ -1,0 +1,18 @@
+
+Inactive Modules:
+  1) UCX/1.9.0     2) numactl/2.0.13
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/2.35     2) zlib/1.2.11
+
+The following have been reloaded with a version change:
+  1) GCCcore/10.2.0 => GCCcore/7.3.0
+
+Threads: 4
+Matrix Size: 512
+Parallel Strassen Runtime (CUDA): 0.02 seconds
+Multiply Time (ms): 0.357504
+H2D Time (ms): 0.290848
+D2H Time (ms): 0.123648
+Strassen Time (ms): 23.690496
+Verification Successful

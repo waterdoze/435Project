@@ -1,0 +1,18 @@
+
+Inactive Modules:
+  1) UCX/1.9.0     2) numactl/2.0.13
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) binutils/2.35     2) zlib/1.2.11
+
+The following have been reloaded with a version change:
+  1) GCCcore/10.2.0 => GCCcore/7.3.0
+
+THREADS: 1
+MATRIX_SIZE: 128
+START: 0.000000; STOP 0.000000
+Elapsed time: 0.000000s
+Host to Device Time (s): 0.000174
+Device to Host Time (s): 0.000068
+Naive Time (s): 0.000453
+Verification successful.
