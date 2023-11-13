@@ -518,6 +518,7 @@ int main(int argc, char *argv[])
     int n;
     n = atoi(argv[2]);
     THREADS = atoi(argv[1]);
+    BLOCKS = (n + THREADS - 1) / THREADS;
     printf("Threads: %d\n", THREADS);
     printf("Matrix Size: %d\n", n);
     int **mat1 = allocateMatrix2D(n);
