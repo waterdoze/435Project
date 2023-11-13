@@ -52,8 +52,7 @@ int main(int argc, char *argv[])
     const char *comp = "comp";
     const char *correctness = "correctness";
 
-    const char *host2device = "host2device";
-    const char *device2host = "device2host";
+    const char *cudamemcpy = "cudamemcpy";
     const char *cuda_naive_time = "cuda_naive_time";
 
     cudaEventCreate(&start_htd);
@@ -72,7 +71,6 @@ int main(int argc, char *argv[])
     // So we know we have threads amount of threads so can we calculate how blocks we need then?
 
     BLOCKS = (MATRIX_SIZE + THREADS - 1) / THREADS;
-    printf("BLOCKS: %d\n", BLOCKS);
     int h_a[MATRIX_SIZE * MATRIX_SIZE];
     int h_b[MATRIX_SIZE * MATRIX_SIZE];
     int h_c[MATRIX_SIZE * MATRIX_SIZE];
@@ -101,10 +99,12 @@ int main(int argc, char *argv[])
 
     cudaEventRecord(start_htd);
     CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(host2device);
+    CALI_MARK_BEGIN(cudamemcpy);
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
+    CALI_MARK_END(cudamemcpy);
+    CALI_MARK_BEGIN(cudamemcpy);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
-    CALI_MARK_END(host2device);
+    CALI_MARK_END(cudamemcpy);
     CALI_MARK_END(comm);
     cudaEventRecord(stop_htd);
 
@@ -125,9 +125,9 @@ int main(int argc, char *argv[])
 
     cudaEventRecord(start_dth);
     CALI_MARK_BEGIN(comm);
-    CALI_MARK_BEGIN(device2host);
+    CALI_MARK_BEGIN(cudamemcpy);
     cudaMemcpy(h_c, d_c, bytes, cudaMemcpyDeviceToHost);
-    CALI_MARK_END(device2host);
+    CALI_MARK_END(cudamemcpy);
     CALI_MARK_END(comm);
     cudaEventRecord(stop_dth);
 
