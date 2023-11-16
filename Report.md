@@ -301,3 +301,50 @@ adiak::value("implementation_source", implementation_source) // Where you got th
 They will show up in the `Thicket.metadata` if the caliper file is read into Thicket.
 
 **See the `Builds/` directory to find the correct Caliper configurations to get the above metrics for CUDA, MPI, or OpenMP programs.** They will show up in the `Thicket.dataframe` when the Caliper file is read into Thicket.
+
+## 4. Performance evaluation
+
+Include detailed analysis of computation performance, communication performance. 
+Include figures and explanation of your analysis.
+
+### 4a. Parameter Variation
+inputSizes:
+- Matrix Size: 128x128, 256x256, 512x512, 1024x1024, 2048x2048, 4096x4096
+
+- Thread/Process Size: 1, 2, 4, 8, 16, 32, 64, 128
+
+num_procs, num_threads:
+- MPI: num_procs:
+    - 2, 4, 8, 16, 32, 64, 128
+- CUDA: num_threads:
+    - 64, 128, 256, 512, 1024, 2048, 4096
+
+Total Number of Caliper files: 132
+### 4b. Hints for performance analysis
+
+To automate running a set of experiments, parameterize your program.
+
+- inputType: If you are sorting, "Sorted" could generate a sorted input to pass into your algorithms
+- algorithm: You can have a switch statement that calls the different algorithms and sets the Adiak variables accordingly
+- num_procs:   How many MPI ranks you are using
+- num_threads: Number of CUDA or OpenMP threads
+
+When your program works with these parameters, you can write a shell script 
+that will run a for loop over the parameters above (e.g., on 64 processors, 
+perform runs that invoke algorithm2 for Sorted, ReverseSorted, and Random data).  
+
+### 4c. You should measure the following performance metrics
+- `Time`
+    - Min time/rank
+    - Max time/rank
+    - Avg time/rank
+    - Total time
+    - Variance time/rank
+    - `If GPU`:
+        - Avg GPU time/rank
+        - Min GPU time/rank
+        - Max GPU time/rank
+        - Total GPU time
+
+`Intel top-down`: For your CPU-only experiments on the scale of a single node, you should
+generate additional performance data, measuring the hardware counters on the CPU. This can be done by adding `topdown.all` to the `spot()` options in the `CALI_CONFIG` in your jobfile.
