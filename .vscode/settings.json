@@ -51,5 +51,6 @@
         "typeinfo": "cpp",
         "ctime": "cpp",
         "iomanip": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": false
 }
