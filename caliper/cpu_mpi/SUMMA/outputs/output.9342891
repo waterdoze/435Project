@@ -1,0 +1,5 @@
+m, n, k = 4096, 4096, 4096
+SUMMA took 11.110391 sec
+SUMMA: OK: eps = 0.000000
+JOBID        NAME                 USER                     PARTITION              NODES  CPUS  STATE        TIME         TIME_LEFT    START_TIME         REASON                   NODELIST
+9342891      JobName              anqduong                 short                  16     64    RUNNING      32:09        1:27:51      2023-11-23T18:52:1 None                     c[441,472,477,479-480,482-485,487-488,490-494]

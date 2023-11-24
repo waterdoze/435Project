@@ -28,6 +28,23 @@ int m;
 int n;
 int k;
 
+const char *data_init = "data_init";
+
+const char *comm = "comm";
+const char *comm_small = "comm_small";
+const char *comm_large = "comm_large";
+
+const char *comp = "comp";
+const char *comp_small = "comp_small";
+const char *comp_large = "comp_large";
+const char *correctness = "correctness";
+
+const char *bcast = "bcast";
+const char *gather = "gather";
+const char *cart_sub = "cart_sub";
+const char *cart_coord = "cart_coord";
+const char *memcpy_glob = "memcpy_glob";
+const char *memcpy_loc = "memcpy_loc";
 // each processor will keep its rank in `myrank`
 int myrank;
 
@@ -270,7 +287,12 @@ void SUMMA(MPI_Comm comm_cart, const int mb, const int nb, const int kb, double 
         CALI_MARK_END(comp);
 
         // C_loc = C_loc + C_loc_tmp using plus_matrix
+
+        CALI_MARK_BEGIN(comp);
+        CALI_MARK_BEGIN(comp_small);
         plus_matrix(mb, kb, C_loc, C_loc_tmp, C_loc);
+        CALI_MARK_END(comp_small);
+        CALI_MARK_END(comp);
     }
     free(A_loc_save);
     free(B_loc_save);
@@ -309,24 +331,6 @@ void parse_cmdline(int argc, char *argv[]) {
         printf("m, n, k = %d, %d, %d\n", m, n, k);
     }
 }
-
-const char *data_init = "data_init";
-
-const char *comm = "comm";
-const char *comm_small = "comm_small";
-const char *comm_large = "comm_large";
-
-const char *comp = "comp";
-const char *comp_large = "comp_large";
-const char *correctness = "correctness";
-
-const char *bcast = "bcast";
-const char *gather = "gather";
-const char *cart_sub = "cart_sub";
-const char *cart_coord = "cart_coord";
-const char *memcpy_glob = "memcpy_glob";
-const char *memcpy_loc = "memcpy_loc";
-
 
 int main(int argc, char *argv[]) {
 
