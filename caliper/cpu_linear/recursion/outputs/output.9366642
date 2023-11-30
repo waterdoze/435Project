@@ -1,0 +1,4 @@
+linear naive-recur (4096) time span: 740.35
+algorithm has correctly calculated the resulting matrix
+JOBID        NAME                 USER                     PARTITION              NODES  CPUS  STATE        TIME         TIME_LEFT    START_TIME         REASON                   NODELIST
+9366642      JobName              anqduong                 long                   1      4     RUNNING      32:34        1-23:27:26   2023-11-29T23:57:5 None                     c338

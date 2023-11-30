@@ -1,0 +1,4 @@
+linear strass (256) time span: 0.16
+algorithm has correctly calculated the resulting matrix
+JOBID        NAME                 USER                     PARTITION              NODES  CPUS  STATE        TIME         TIME_LEFT    START_TIME         REASON                   NODELIST
+9366482      JobName              anqduong                 long                   1      4     RUNNING      0:04         1-23:59:56   2023-11-29T23:21:2 None                     c338
