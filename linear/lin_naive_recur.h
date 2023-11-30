@@ -15,8 +15,8 @@ void cpu_lin_naive_recur(const mat &A, const mat &B,
         return;
     }
 
-    if (A_row == 1) {
-        C[0][0] = A[0][0] * B[0][0];
+    if (A_row <= 512) {
+        cpu_lin_naive(A, B, C);
         return;
     }
 

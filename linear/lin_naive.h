@@ -1,7 +1,7 @@
 #ifndef LIN_NAIVE_H
 #define LIN_NAIVE_H
 
-void cpu_lin_naive(mat &A, mat &B, mat &C) {
+void cpu_lin_naive(const mat &A, const mat &B, mat &C) {
 	size_t A_row = A.size();
 	size_t A_column = A[0].size();
 	size_t B_row = B.size();

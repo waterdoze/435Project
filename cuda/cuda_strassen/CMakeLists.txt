@@ -6,7 +6,7 @@ find_package(MPI REQUIRED)
 find_package(caliper REQUIRED)
 find_package(adiak REQUIRED)
 
-add_executable(cuda cuda_main.cu)
+add_executable(cuBLAS cuBLAS.cu)
 
 message(STATUS "MPI includes : ${MPI_INCLUDE_PATH}")
 message(STATUS "CUDA includes : ${CUDA_INCLUDE_DIRS}")
@@ -19,3 +19,4 @@ include_directories(${adiak_INCLUDE_DIRS})
 
 target_link_libraries(cuda PRIVATE MPI::MPI_CXX)
 target_link_libraries(cuda PRIVATE caliper)
+target_link_libraries(cuda PRIVATE cublas)
