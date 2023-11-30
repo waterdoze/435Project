@@ -1,0 +1,7 @@
+Matrix Size: 128
+Number of Processes: 2
+Start: 1784288.552773; End: 1784288.556435
+MPI Naive Time: 0.003662
+Verification Passed!
+JOBID        NAME                 USER                     PARTITION              NODES  CPUS  STATE        TIME         TIME_LEFT    START_TIME         REASON                   NODELIST
+9364612      JobName              anqduong                 short                  16     64    RUNNING      0:04         1:59:56      2023-11-29T18:17:0 None                     c[772-773,775-776,778-782,784,786-788,791-793]
