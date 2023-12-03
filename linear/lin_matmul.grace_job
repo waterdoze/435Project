@@ -24,7 +24,7 @@ module load intel/2020b       # load Intel software stack
 
 module load CMake/3.12.1
 
-CALI_CONFIG="spot(output=${matrix_size}-cpu-linear-naive.cali)" \
+CALI_CONFIG="spot(output=${matrix_size}-cpu-linear-naive.cali,topdown.toplevel)" \
 ./lin_main $matrix_size
 
 
